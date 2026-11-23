@@ -126,6 +126,31 @@
 	var spinner = box.querySelector( '.spinner' );
 	var status = box.querySelector( '.cvkp-claude-status' );
 
+	// Utskicket måste ha ett namn innan Claude fyller i det.
+	var title = document.getElementById( 'title' );
+	var needsTitle = box.querySelector( '.cvkp-claude-needs-title' );
+	function hasTitle() {
+		return ! title || '' !== title.value.trim();
+	}
+	function updateTitleState() {
+		var ok = hasTitle();
+		button.disabled = ! ok;
+		if ( needsTitle ) {
+			needsTitle.hidden = ok;
+		}
+	}
+	function requireTitle() {
+		updateTitleState();
+		if ( title ) {
+			title.focus();
+		}
+	}
+	if ( title ) {
+		title.addEventListener( 'input', updateTitleState );
+		title.addEventListener( 'change', updateTitleState );
+	}
+	updateTitleState();
+
 	/** Fälten som kan fyllas i: fältnamn => element-id (editorer har id cvkp_<namn>). */
 	var FIELDS = {
 		subject: 'cvkp-subject',
@@ -204,6 +229,10 @@
 	button.addEventListener( 'click', function () {
 		var links = document.getElementById( 'cvkp-claude-links' ).value.trim();
 		var intro = document.getElementById( 'cvkp-claude-intro' ).value;
+		if ( ! hasTitle() ) {
+			requireTitle();
+			return;
+		}
 		if ( ! links ) {
 			document.getElementById( 'cvkp-claude-links' ).focus();
 			return;
@@ -288,8 +317,8 @@
 				status.classList.add( 'cvkp-warn' );
 			} )
 			.finally( function () {
-				button.disabled = false;
 				spinner.classList.remove( 'is-active' );
+				updateTitleState();
 			} );
 	} );
 }() );
