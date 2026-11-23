@@ -45,3 +45,8 @@
 .cvkp-warn { color: #b32d2e !important; }
 
 .cvkp-tabs { margin-bottom: 8px; }
+
+.cvkp-claude { margin-top: 20px; }
+.cvkp-claude .postbox-header h2 { padding: 8px 12px; margin: 0; font-size: 14px; }
+.cvkp-claude .spinner { float: none; }
+.cvkp-claude-status { margin-left: 6px; }

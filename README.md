@@ -32,6 +32,7 @@ Kortversion:
 ## Använda
 
 1. **Cykla&Vandra → Kanalpublicering → Nytt utskick.** Ge det ett internt namn.
+   - **Snabbast:** klistra in länkar till resorna i rutan **Claude – fyll i utskicket** under namnet och klicka **Fyll i utskicket**. Resorna läggs till med första stycket från resesidan som text, och Claude skriver en kort ingress om ni inte skriver en själva. Läs igenom och justera sedan som vanligt.
 2. Fyll i ämnesrad, förhandstext, rubrik, inledning och eventuell rabattkod.
 3. Under **Resor**: välj resa och klicka **Lägg till resa**. Bild, länk, typ och antal dagar hämtas från resesidan, och resans beskrivning läggs in som starttext. Skriv om texten, ändra rubrik eller etikett vid behov och sortera med pilarna. "Läs mer" läggs till automatiskt. Välj också bild för Instagram, eller ta bort resan från Instagram.
 4. **Förhandsgranska nyhetsbrevet** visar mejlet direkt, även osparade ändringar.
@@ -59,5 +60,6 @@ Användare som får redigera andras inlägg (Redaktör och Administratör) kan s
 - Mejlmallen finns i `templates/email.php` (640 px, inline-stilar, Mailchimps footer-taggar).
 - Facebook och Instagram: `includes/class-meta.php` (Graph API), `class-social.php` (förslag, utkast, schemaläggning) och `class-instagram-images.php` (beskurna JPEG-kopior i `uploads/cvkp-instagram/`). Status sparas i `_cvkp_facebook` och `_cvkp_instagram`. Instagram publiceras via WP-Cron-händelsen `cvkp_instagram_publish`.
 - WPML: utskick översätts inte, och resor och blogginlägg hanteras alltid på standardspråket (`wpml-config.xml`, `class-wpml.php`).
+- Claude-rutan: `includes/class-claude.php`. Den använder samma Anthropic-nyckel som AI-sök (`CVAI_API_KEY` eller AI-söks inställningar), eller en egen `CVKP_ANTHROPIC_API_KEY` i wp-config.php. Modellen (standard `claude-opus-5-5`) ställs in under Inställningar.
 - Lokal testmiljö med simulerade API:er: `tests/local/`.
 - Kräver WordPress 6.0 och PHP 7.4 eller senare.

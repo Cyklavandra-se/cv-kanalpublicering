@@ -78,6 +78,8 @@ class CVKP_Settings {
 			'ig_hashtags'       => '#cyklavandra',
 			'ig_link_text'      => 'Läs mer via länken i vår bio → Aktuellt',
 			'ig_ratio'          => '4:5',
+			// Claude-rutan i utskick.
+			'claude_model'      => 'claude-opus-5-5',
 		);
 	}
 
@@ -331,6 +333,24 @@ class CVKP_Settings {
 							<p class="description">Bilderna beskärs från mitten. Originalen ändras inte.</p>
 						</td>
 					</tr>
+				</table>
+
+				<h2>Claude</h2>
+				<p>Claude-rutan överst i ett utskick hämtar resornas första stycke och skriver en ingress när ni inte skriver en själva.</p>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row">Nyckel</th>
+						<td>
+							<?php $source = CVKP_Claude::key_source(); ?>
+							<?php if ( '' !== $source ) : ?>
+								<p><strong>Används: <?php echo esc_html( $source ); ?>.</strong></p>
+							<?php else : ?>
+								<p class="cvkp-warn"><strong>Ingen nyckel hittades.</strong></p>
+							<?php endif; ?>
+							<p class="description">Samma nyckel som AI-sök används automatiskt. Vill ni ha en egen för Kanalpublicering: <code>define( 'CVKP_ANTHROPIC_API_KEY', '...' );</code> i wp-config.php.</p>
+						</td>
+					</tr>
+					<?php self::text_row( 'claude_model', 'Modell', $o, 'Till exempel claude-opus-5-5 (standard) eller claude-sonnet-5-5 (billigare).' ); ?>
 				</table>
 
 				<?php submit_button( 'Spara inställningar' ); ?>
