@@ -104,17 +104,22 @@ class CVKP_Trip_Data {
 		return $data;
 	}
 
-	/** Bild för mejlet: originalet om det är rimligt stort, annars storleken "large". */
+	/**
+	 * Bildstorlek för mejl och blogg: originalet om det är rimligt stort (resornas utvalda
+	 * bilder är 1200 px breda), annars "large". "large" är bara 1024 px på sajten.
+	 */
+	public static function image_size( $attachment_id ) {
+		$full = wp_get_attachment_image_src( $attachment_id, 'full' );
+		return ( $full && (int) $full[1] <= 1600 ) ? 'full' : 'large';
+	}
+
+	/** Bild för mejlet, se image_size(). */
 	public static function email_image_url( $attachment_id ) {
 		if ( ! $attachment_id ) {
 			return '';
 		}
-		$full = wp_get_attachment_image_src( $attachment_id, 'full' );
-		if ( $full && (int) $full[1] <= 1600 ) {
-			return (string) $full[0];
-		}
-		$large = wp_get_attachment_image_src( $attachment_id, 'large' );
-		return $large ? (string) $large[0] : ( $full ? (string) $full[0] : '' );
+		$src = wp_get_attachment_image_src( $attachment_id, self::image_size( $attachment_id ) );
+		return $src ? (string) $src[0] : '';
 	}
 
 	public static function type_from_tags( array $tags ) {

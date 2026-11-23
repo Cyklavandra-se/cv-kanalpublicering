@@ -653,6 +653,7 @@ class CVKP_Mailing {
 				break;
 			}
 		}
+		self::hide_featured_image( $new_id );
 
 		return array(
 			'type'     => 'success',
@@ -660,6 +661,21 @@ class CVKP_Mailing {
 			'link'     => get_edit_post_link( $new_id, 'raw' ),
 			'linkText' => 'Granska och publicera',
 		);
+	}
+
+	/**
+	 * Den utvalda bilden är också första bilden i inlägget. Den behövs för bloggflödet och
+	 * för förhandsvisningen när inlägget delas, men ska inte visas överst i inlägget.
+	 * Avada: sidinställningen "Show First Featured Image" (postmeta _fusion).
+	 */
+	public static function hide_featured_image( $post_id ) {
+		$fusion = get_post_meta( $post_id, '_fusion', true );
+		$fusion = is_array( $fusion ) ? $fusion : array();
+		if ( isset( $fusion['show_first_featured_image'] ) && 'no' === $fusion['show_first_featured_image'] ) {
+			return;
+		}
+		$fusion['show_first_featured_image'] = 'no';
+		update_post_meta( $post_id, '_fusion', $fusion );
 	}
 
 	public static function notices() {
