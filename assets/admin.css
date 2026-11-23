@@ -1,0 +1,22 @@
+.cvkp-field { margin: 0 0 16px; }
+.cvkp-field label { display: block; margin-bottom: 4px; }
+.cvkp-field .description { display: block; margin-top: 4px; }
+.cvkp-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+@media ( max-width: 782px ) { .cvkp-cols { grid-template-columns: 1fr; } }
+
+.cvkp-trip { border: 1px solid #dcdcde; border-radius: 4px; padding: 12px; margin: 0 0 12px; background: #fff; }
+.cvkp-trip label { display: block; font-weight: 600; margin-bottom: 4px; }
+.cvkp-trip-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.cvkp-trip-thumb img { width: 96px; height: 50px; object-fit: cover; border-radius: 3px; display: block; }
+.cvkp-trip-title { font-weight: 600; font-size: 14px; flex: 1; }
+.cvkp-trip-actions { display: flex; gap: 10px; }
+.cvkp-trip-actions .button-link { font-size: 13px; }
+.cvkp-trip-actions .cvkp-up, .cvkp-trip-actions .cvkp-down { font-size: 16px; text-decoration: none; }
+.cvkp-trip-actions .cvkp-remove { color: #b32d2e; }
+
+.cvkp-add-trip select { max-width: 60%; }
+.cvkp-add-trip .spinner { float: none; }
+
+#cvkp-channels .cvkp-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.cvkp-status { margin: 0; }
+.cvkp-status li { margin-bottom: 8px; }
