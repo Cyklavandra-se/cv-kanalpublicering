@@ -55,7 +55,7 @@ Lägg aldrig token i repot. Det är publikt.
 
 ## 5. Testa
 
-**Cykla&Vandra → Kanalpublicering → Testa anslutningen till Meta.** Svaret ska vara *Facebook-sidan "Cykla & Vandra" (ID …) hittades. Instagram-kontot @cyklavandra.se är kopplat (ID …).* Sid-ID och Instagram-ID sparas automatiskt.
+**Cykla&Vandra → Kanalpublicering → Inställningar → Testa anslutningen till Meta.** Svaret ska vara *Facebook-sidan "Cykla & Vandra" (ID …) hittades. Instagram-kontot @cyklavandra.se är kopplat (ID …).* Sid-ID och Instagram-ID sparas automatiskt.
 
 Om testet säger att inget Instagram-konto är kopplat, gå tillbaka till steg 1.
 

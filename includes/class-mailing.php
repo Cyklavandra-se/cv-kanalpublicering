@@ -70,7 +70,7 @@ class CVKP_Mailing {
 					'add_new'       => 'Nytt utskick',
 					'add_new_item'  => 'Nytt utskick',
 					'edit_item'     => 'Redigera utskick',
-					'all_items'     => 'Utskick',
+					'all_items'     => 'Kanalpublicering', // Enda raden i menyn Cykla&Vandra.
 					'search_items'  => 'Sök utskick',
 					'not_found'     => 'Inga utskick ännu.',
 				),

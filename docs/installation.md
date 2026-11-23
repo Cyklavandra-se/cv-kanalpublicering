@@ -21,7 +21,7 @@ Ta en säkerhetskopia av sajten (eller kontrollera att webbhotellets dagliga kop
    define( 'CVKP_MAILCHIMP_API_KEY', 'nyckeln-som-slutar-med-us1' );
    ```
 
-3. **Cykla&Vandra → Kanalpublicering → Testa anslutningen till Mailchimp.** Du ska få se *"Anslutningen fungerar. Listan … har N prenumeranter."*
+3. **Cykla&Vandra → Kanalpublicering → Inställningar → Testa anslutningen till Mailchimp.** Du ska få se *"Anslutningen fungerar. Listan … har N prenumeranter."*
 
 Om testet misslyckas:
 
@@ -34,7 +34,7 @@ Om testet misslyckas:
 
 ## 4. Kontrollera inställningarna
 
-Under **Cykla&Vandra → Kanalpublicering**:
+Under **Cykla&Vandra → Kanalpublicering → Inställningar**:
 
 - Avsändarnamn **Cykla & Vandra**, avsändare **nyhetsbrev@cyklavandra.se**. Adressen måste vara verifierad i Mailchimp, och domänen bör vara autentiserad under Website → Domains.
 - Loggan och adressen i footern.
@@ -42,7 +42,7 @@ Under **Cykla&Vandra → Kanalpublicering**:
 
 ## 5. Första testutskicket
 
-1. **Utskick → Nytt utskick**, t.ex. med namnet "TEST – får raderas".
+1. **Cykla&Vandra → Kanalpublicering → Nytt utskick**, t.ex. med namnet "TEST – får raderas".
 2. Fyll i ämnesrad, förhandstext och rubrik och lägg till 2 resor. Bocka bara i **Mailchimp** och **Blogginlägg**.
 3. **Förhandsgranska nyhetsbrevet** och kontrollera layouten.
 4. **Spara och skapa utkast.** Det ska komma två gröna rutor med länkar.
@@ -70,7 +70,7 @@ Under **Cykla&Vandra → Kanalpublicering**:
 
 ## 8. Behörighet
 
-Logga in som Sarah (Redaktör) och kontrollera att hon ser **Cykla&Vandra → Utskick** och kan skapa utkast, men inte **Cykla&Vandra → Kanalpublicering**.
+Logga in som Sarah (Redaktör) och kontrollera att hon ser **Cykla&Vandra → Kanalpublicering** och kan skapa utkast, men att fliken **Inställningar** saknas för henne.
 
 ## 9. Facebook och Instagram
 
