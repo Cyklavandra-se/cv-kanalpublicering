@@ -13,10 +13,12 @@ class CVKP_Mailing {
 	const META_BLOG   = '_cvkp_blog_post_id';
 	const META_SOURCE = '_cvkp_mailing_id'; // På blogginlägget: vilket utskick det kom från.
 
-	/** Kanaler i fas 1. Facebook och Instagram läggs till i fas 2. */
+	/** Kanaler. Facebook och Instagram blir utkast i WordPress och schemaläggs separat. */
 	const CHANNELS = array(
 		'mailchimp' => 'Mailchimp – utkast till nyhetsbrev',
 		'blog'      => 'Blogginlägg – utkast på cyklavandra.se',
+		'facebook'  => 'Facebook – utkast till länkinlägg',
+		'instagram' => 'Instagram – utkast till karusell',
 	);
 
 	public static function init() {
@@ -112,6 +114,10 @@ class CVKP_Mailing {
 			'blog_title'    => '',
 			'blog_intro'    => '',
 			'blog_excerpt'  => '',
+			'fb_text'       => '',
+			'fb_link'       => '',
+			'ig_signer'     => '',
+			'ig_text'       => '',
 			'channels'      => array_keys( self::CHANNELS ),
 		);
 	}
@@ -140,6 +146,7 @@ class CVKP_Mailing {
 		add_meta_box( 'cvkp-trips', 'Resor', array( __CLASS__, 'box_trips' ), self::POST_TYPE, 'normal', 'high' );
 		add_meta_box( 'cvkp-ending', 'Avslutning', array( __CLASS__, 'box_ending' ), self::POST_TYPE, 'normal', 'default' );
 		add_meta_box( 'cvkp-blog', 'Blogginlägg', array( __CLASS__, 'box_blog' ), self::POST_TYPE, 'normal', 'default' );
+		add_meta_box( 'cvkp-social', 'Facebook och Instagram', array( 'CVKP_Social', 'box' ), self::POST_TYPE, 'normal', 'default' );
 		add_meta_box( 'cvkp-channels', 'Kanaler', array( __CLASS__, 'box_channels' ), self::POST_TYPE, 'side', 'high' );
 		remove_meta_box( 'submitdiv', self::POST_TYPE, 'side' );
 	}
@@ -219,11 +226,15 @@ class CVKP_Mailing {
 			array(
 				'id'      => '',
 				'heading' => '',
-				'label'   => '',
-				'text'    => '',
+				'label'    => '',
+				'text'     => '',
+				'ig'       => '1',
+				'ig_image' => 0,
 			)
 		);
 		$name = 'cvkp[trips][' . $key . ']';
+		$imgs = $row['id'] ? CVKP_Instagram_Images::candidates( (int) $row['id'] ) : array();
+		$pick = (int) $row['ig_image'] && in_array( (int) $row['ig_image'], $imgs, true ) ? (int) $row['ig_image'] : ( $imgs ? $imgs[0] : 0 );
 		?>
 		<div class="cvkp-trip" data-id="<?php echo esc_attr( $row['id'] ); ?>">
 			<div class="cvkp-trip-head">
@@ -242,6 +253,19 @@ class CVKP_Mailing {
 				<p><label>Etikett ovanför rubriken</label><input type="text" class="widefat cvkp-trip-label" name="<?php echo esc_attr( $name ); ?>[label]" value="<?php echo esc_attr( $row['label'] ); ?>" placeholder="<?php echo $data ? esc_attr( $data['label'] ) : ''; ?>"></p>
 			</div>
 			<p><label>Text</label><textarea class="widefat cvkp-trip-text" rows="5" name="<?php echo esc_attr( $name ); ?>[text]"><?php echo esc_textarea( $row['text'] ); ?></textarea></p>
+			<div class="cvkp-trip-ig">
+				<input type="hidden" name="<?php echo esc_attr( $name ); ?>[ig]" value="0">
+				<label class="cvkp-inline"><input type="checkbox" name="<?php echo esc_attr( $name ); ?>[ig]" value="1" <?php checked( '0' !== (string) $row['ig'] ); ?>> Med på Instagram, med bilden:</label>
+				<?php if ( $imgs ) : ?>
+				<div class="cvkp-ig-choices">
+					<?php foreach ( $imgs as $img ) : ?>
+					<label title="<?php echo esc_attr( get_the_title( $img ) ); ?>"><input type="radio" name="<?php echo esc_attr( $name ); ?>[ig_image]" value="<?php echo (int) $img; ?>" <?php checked( $pick, $img ); ?>><?php echo wp_get_attachment_image( $img, 'thumbnail' ); ?></label>
+					<?php endforeach; ?>
+				</div>
+				<?php else : ?>
+				<span class="description">Resan har inga bilder.</span>
+				<?php endif; ?>
+			</div>
 		</div>
 		<?php
 	}
@@ -286,7 +310,7 @@ class CVKP_Mailing {
 				esc_html( $label )
 			);
 		}
-		echo '<p class="description"><label><input type="checkbox" disabled> Facebook</label><br><label><input type="checkbox" disabled> Instagram</label><br>Kommer i fas 2.</p>';
+		echo '<p class="description">Facebook och Instagram blir utkast här i WordPress. De publiceras först när någon granskat dem och klickat <em>Schemalägg</em> i rutan Facebook och Instagram.</p>';
 
 		echo '<p class="cvkp-buttons"><button type="submit" name="save" value="Spara" class="button button-large">Spara</button> ';
 		echo '<button type="submit" name="cvkp_run" value="1" class="button button-primary button-large cvkp-run">Spara och skapa utkast</button></p>';
@@ -314,6 +338,22 @@ class CVKP_Mailing {
 			);
 		} else {
 			echo '<li>Blogg: inget inlägg ännu</li>';
+		}
+		$labels = array(
+			'none'       => 'utkast',
+			'scheduled'  => 'schemalagt',
+			'publishing' => 'publiceras just nu',
+			'published'  => 'publicerat',
+			'failed'     => 'inte publicerat – se nedan',
+		);
+		foreach ( array( 'facebook' => 'Facebook', 'instagram' => 'Instagram' ) as $channel => $label ) {
+			$state = CVKP_Social::get_state( $post->ID, $channel );
+			if ( empty( $state['draft'] ) && 'none' === $state['status'] ) {
+				printf( '<li>%s: inget utkast ännu</li>', esc_html( $label ) );
+				continue;
+			}
+			$when = 'scheduled' === $state['status'] ? ' ' . wp_date( 'j M H:i', (int) $state['scheduled']['at'] ) : '';
+			printf( '<li>%s: <a href="#cvkp-social">%s%s</a></li>', esc_html( $label ), esc_html( $labels[ $state['status'] ] ), esc_html( $when ) );
 		}
 		echo '</ul>';
 	}
@@ -344,7 +384,7 @@ class CVKP_Mailing {
 	/** Läser och tvättar formulärets fält. */
 	public static function from_request( array $raw ) {
 		$d     = self::defaults();
-		$text  = array( 'subject', 'preheader', 'eyebrow', 'heading', 'code', 'code_note', 'trips_heading', 'button_text', 'blog_title' );
+		$text  = array( 'subject', 'preheader', 'eyebrow', 'heading', 'code', 'code_note', 'trips_heading', 'button_text', 'blog_title', 'ig_signer' );
 		$rich  = array( 'intro', 'after_offer', 'trips_intro', 'closing', 'greeting', 'ps', 'blog_intro' );
 		$out   = array();
 		foreach ( $text as $key ) {
@@ -355,6 +395,12 @@ class CVKP_Mailing {
 		}
 		$out['button_url']   = isset( $raw['button_url'] ) ? esc_url_raw( $raw['button_url'] ) : $d['button_url'];
 		$out['blog_excerpt'] = isset( $raw['blog_excerpt'] ) ? sanitize_textarea_field( $raw['blog_excerpt'] ) : '';
+		$out['fb_text']      = isset( $raw['fb_text'] ) ? sanitize_textarea_field( $raw['fb_text'] ) : '';
+		$out['ig_text']      = isset( $raw['ig_text'] ) ? sanitize_textarea_field( $raw['ig_text'] ) : '';
+		$out['fb_link']      = isset( $raw['fb_link'] ) ? esc_url_raw( trim( $raw['fb_link'] ) ) : '';
+		if ( '' !== $out['ig_signer'] && ! in_array( $out['ig_signer'], CVKP_Settings::team(), true ) ) {
+			$out['ig_signer'] = '';
+		}
 		$out['channels']     = isset( $raw['channels'] ) ? array_values( array_intersect( array_keys( self::CHANNELS ), (array) $raw['channels'] ) ) : array();
 
 		$out['trips'] = array();
@@ -369,6 +415,8 @@ class CVKP_Mailing {
 					'heading' => isset( $row['heading'] ) ? sanitize_text_field( $row['heading'] ) : '',
 					'label'   => isset( $row['label'] ) ? sanitize_text_field( $row['label'] ) : '',
 					'text'    => isset( $row['text'] ) ? wp_kses_post( $row['text'] ) : '',
+					'ig'       => isset( $row['ig'] ) && '0' === (string) $row['ig'] ? '0' : '1',
+					'ig_image' => isset( $row['ig_image'] ) ? absint( $row['ig_image'] ) : 0,
 				);
 			}
 		}
@@ -387,11 +435,39 @@ class CVKP_Mailing {
 		$data = self::from_request( $raw );
 		update_post_meta( $post_id, self::META_DATA, $data );
 
+		$notices = array();
+		if ( ! empty( $_POST['cvkp_schedule'] ) || ! empty( $_POST['cvkp_cancel'] ) ) {
+			$notices = self::run_social_action( $post_id, $data );
+		}
+		if ( $notices ) {
+			set_transient( 'cvkp_notices_' . get_current_user_id(), $notices, 120 );
+		}
 		if ( empty( $_POST['cvkp_run'] ) ) {
 			return;
 		}
-		$notices = self::run( $post_id, $data, get_the_title( $post_id ) );
+		$notices = self::run( $post_id, $data, html_entity_decode( get_the_title( $post_id ), ENT_QUOTES, 'UTF-8' ) );
 		set_transient( 'cvkp_notices_' . get_current_user_id(), $notices, 120 );
+	}
+
+	/** Schemalägg eller avbryt Facebook/Instagram. Det här är godkännandet. */
+	private static function run_social_action( $post_id, array $data ) {
+		// phpcs:disable WordPress.Security.NonceVerification -- nonce kontrollerad i save().
+		if ( ! empty( $_POST['cvkp_cancel'] ) ) {
+			$channel = sanitize_key( $_POST['cvkp_cancel'] );
+			return in_array( $channel, array( 'facebook', 'instagram' ), true ) ? array( CVKP_Social::cancel( $post_id, $channel ) ) : array();
+		}
+		$channel = sanitize_key( $_POST['cvkp_schedule'] );
+		if ( ! in_array( $channel, array( 'facebook', 'instagram' ), true ) ) {
+			return array();
+		}
+		$when = isset( $_POST['cvkp_when'][ $channel ] ) ? sanitize_text_field( wp_unslash( $_POST['cvkp_when'][ $channel ] ) ) : '';
+		// phpcs:enable
+
+		// Utkastet byggs om av det som står i fälten just nu, så att det som godkänns är det som syns.
+		$data     = CVKP_Social::fill_suggestions( $post_id, $data, array( $channel ) );
+		$prepared = 'facebook' === $channel ? CVKP_Social::prepare_facebook( $post_id, $data ) : CVKP_Social::prepare_instagram( $post_id, $data );
+		$result   = CVKP_Social::schedule( $post_id, $channel, CVKP_Social::parse_time( $when ) );
+		return 'success' === $result['type'] ? array( $result ) : array( $result, $prepared );
 	}
 
 	/**
@@ -410,6 +486,21 @@ class CVKP_Mailing {
 
 		if ( in_array( 'blog', $data['channels'], true ) ) {
 			$notices[] = self::run_blog( $post_id, $data );
+		}
+
+		$social = array_values( array_intersect( array( 'facebook', 'instagram' ), $data['channels'] ) );
+		if ( $social ) {
+			$data = CVKP_Social::fill_suggestions( $post_id, $data, $social );
+			if ( in_array( 'facebook', $social, true ) ) {
+				$notices[] = CVKP_Social::prepare_facebook( $post_id, $data );
+			}
+			if ( in_array( 'instagram', $social, true ) ) {
+				$notices[] = CVKP_Social::prepare_instagram( $post_id, $data );
+				$hint      = CVKP_Social::hashtag_hint( $data['ig_text'] );
+				if ( $hint ) {
+					$notices[] = array( 'type' => 'warning', 'message' => 'Instagram: ' . $hint );
+				}
+			}
 		}
 
 		if ( in_array( 'mailchimp', $data['channels'], true ) ) {
@@ -470,11 +561,17 @@ class CVKP_Mailing {
 		if ( $current && 'trash' !== $current->post_status ) {
 			$postarr['ID'] = $blog_id;
 			unset( $postarr['post_status'] );
+		} else {
+			// Adressen sätts direkt, så att länken blir rätt även om inlägget publiceras via schemaläggning.
+			$postarr['post_name'] = sanitize_title( $postarr['post_title'] );
 		}
 
 		$new_id = wp_insert_post( wp_slash( $postarr ), true );
 		if ( is_wp_error( $new_id ) ) {
 			return array( 'type' => 'error', 'message' => 'Blogg: ' . $new_id->get_error_message() );
+		}
+		if ( ! isset( $postarr['ID'] ) ) {
+			CVKP_Wpml::set_default_language( $new_id, 'post' );
 		}
 		update_post_meta( $new_id, self::META_SOURCE, $post_id );
 		update_post_meta( $post_id, self::META_BLOG, $new_id );
@@ -489,7 +586,7 @@ class CVKP_Mailing {
 
 		return array(
 			'type'     => 'success',
-			'message'  => sprintf( 'Blogg: utkastet "%s" är %s.', get_the_title( $new_id ), isset( $postarr['ID'] ) ? 'uppdaterat' : 'skapat' ),
+			'message'  => sprintf( 'Blogg: utkastet "%s" är %s.', html_entity_decode( get_the_title( $new_id ), ENT_QUOTES, 'UTF-8' ), isset( $postarr['ID'] ) ? 'uppdaterat' : 'skapat' ),
 			'link'     => get_edit_post_link( $new_id, 'raw' ),
 			'linkText' => 'Granska och publicera',
 		);

@@ -43,7 +43,10 @@ class CVKP_Trip_Data {
 		if ( $tag_ids ) {
 			$args['tag__in'] = $tag_ids;
 		}
-		return get_posts( $args );
+		CVKP_Wpml::switch_to_default();
+		$trips = get_posts( $args );
+		CVKP_Wpml::restore();
+		return $trips;
 	}
 
 	public static function is_trip( $post ) {
@@ -85,7 +88,7 @@ class CVKP_Trip_Data {
 			'url'         => get_permalink( $post ),
 			'image_id'    => (int) get_post_thumbnail_id( $post ),
 			'image_url'   => (string) get_the_post_thumbnail_url( $post, 'large' ),
-			'image_full'  => (string) get_the_post_thumbnail_url( $post, 'full' ),
+			'image_full'  => self::email_image_url( (int) get_post_thumbnail_id( $post ) ),
 			'type'        => self::type_from_tags( $tags ),
 			'level'       => self::level_from_tags( $tags ),
 			'self_guided' => in_array( 'sjalvguidad', $tags, true ),
@@ -99,6 +102,19 @@ class CVKP_Trip_Data {
 		$data['label'] = '' !== $custom ? $custom : self::default_label( $data );
 
 		return $data;
+	}
+
+	/** Bild för mejlet: originalet om det är rimligt stort, annars storleken "large". */
+	public static function email_image_url( $attachment_id ) {
+		if ( ! $attachment_id ) {
+			return '';
+		}
+		$full = wp_get_attachment_image_src( $attachment_id, 'full' );
+		if ( $full && (int) $full[1] <= 1600 ) {
+			return (string) $full[0];
+		}
+		$large = wp_get_attachment_image_src( $attachment_id, 'large' );
+		return $large ? (string) $large[0] : ( $full ? (string) $full[0] : '' );
 	}
 
 	public static function type_from_tags( array $tags ) {

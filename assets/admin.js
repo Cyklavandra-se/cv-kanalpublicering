@@ -74,3 +74,42 @@
 		}
 	} );
 }() );
+
+/* Facebook och Instagram: räknare, kopiera text och bekräftelse före schemaläggning. */
+( function () {
+	'use strict';
+
+	var caption = document.getElementById( 'cvkp-ig_text' );
+	var counter = document.querySelector( '.cvkp-ig-count' );
+	if ( caption && counter ) {
+		var max = parseInt( counter.getAttribute( 'data-max' ), 10 ) || 2200;
+		var update = function () {
+			var length = Array.from( caption.value ).length;
+			var tags = ( caption.value.match( /#[\p{L}\p{N}_]+/gu ) || [] ).length;
+			counter.textContent = length + ' / ' + max + ' tecken · ' + tags + ' hashtaggar (husstil 3–5)';
+			counter.classList.toggle( 'cvkp-warn', length > max || tags < 3 || tags > 5 );
+		};
+		caption.addEventListener( 'input', update );
+		update();
+	}
+
+	document.addEventListener( 'click', function ( event ) {
+		var copy = event.target.closest( '.cvkp-copy' );
+		if ( copy ) {
+			var field = document.getElementById( copy.getAttribute( 'data-target' ) );
+			if ( field && navigator.clipboard ) {
+				navigator.clipboard.writeText( field.value ).then( function () {
+					copy.textContent = 'Kopierat!';
+					setTimeout( function () {
+						copy.textContent = 'Kopiera text';
+					}, 2000 );
+				} );
+			}
+			return;
+		}
+		var confirmButton = event.target.closest( '.cvkp-confirm' );
+		if ( confirmButton && ! window.confirm( confirmButton.getAttribute( 'data-confirm' ) ) ) {
+			event.preventDefault();
+		}
+	} );
+}() );

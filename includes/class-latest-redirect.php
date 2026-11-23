@@ -28,6 +28,7 @@ class CVKP_Latest_Redirect {
 		}
 
 		$url = self::latest_url();
+		nocache_headers(); // Får aldrig cachas – målet byts när nästa inlägg publiceras.
 		wp_safe_redirect( $url ? $url : home_url( '/' ), 302 );
 		exit;
 	}
@@ -41,11 +42,14 @@ class CVKP_Latest_Redirect {
 			'orderby'        => 'date',
 			'order'          => 'DESC',
 			'fields'         => 'ids',
+			'suppress_filters' => false, // WPML: bara inlägg på standardspråket.
 		);
+		CVKP_Wpml::switch_to_default();
 		$posts = get_posts( array_merge( $base, array( 'meta_key' => CVKP_Mailing::META_SOURCE ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery
 		if ( ! $posts ) {
 			$posts = get_posts( $base );
 		}
+		CVKP_Wpml::restore();
 		return $posts ? get_permalink( $posts[0] ) : '';
 	}
 }

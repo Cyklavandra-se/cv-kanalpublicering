@@ -1,0 +1,14 @@
+<wpml-config>
+	<custom-types>
+		<!-- Utskick är interna och översätts inte. -->
+		<custom-type translate="0">cvkp_utskick</custom-type>
+	</custom-types>
+	<custom-fields>
+		<!-- Resefakta: antal dagar och nätter kopieras till översättningen, land och etikett översätts. -->
+		<custom-field action="copy-once">_cvkp_days</custom-field>
+		<custom-field action="copy-once">_cvkp_nights</custom-field>
+		<custom-field action="translate">_cvkp_country</custom-field>
+		<custom-field action="translate">_cvkp_label</custom-field>
+		<custom-field action="ignore">_cvkp_mailing_id</custom-field>
+	</custom-fields>
+</wpml-config>

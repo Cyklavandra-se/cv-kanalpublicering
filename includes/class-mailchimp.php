@@ -76,9 +76,14 @@ class CVKP_Mailchimp {
 		$created  = false;
 		if ( $existing_id ) {
 			$current = $this->request( 'GET', '/campaigns/' . rawurlencode( $existing_id ) . '?fields=id,web_id,status' );
+			if ( is_wp_error( $current ) && 'cvkp_mailchimp_404' !== $current->get_error_code() ) {
+				// Nätverksfel o.d.: skapa inte en dubblett, be användaren försöka igen.
+				return new WP_Error( 'cvkp_mc_check', 'Kunde inte kontrollera det befintliga utkastet (' . $current->get_error_message() . '). Försök igen om en stund.' );
+			}
 			if ( ! is_wp_error( $current ) && isset( $current['status'] ) && 'save' === $current['status'] ) {
 				$campaign = $this->request( 'PATCH', '/campaigns/' . rawurlencode( $existing_id ), $body );
 			}
+			// Annars (skickat, schemalagt eller raderat i Mailchimp): skapa ett nytt utkast.
 		}
 
 		if ( null === $campaign ) {

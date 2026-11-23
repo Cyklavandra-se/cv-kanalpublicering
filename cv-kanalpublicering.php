@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       CV Kanalpublicering
  * Plugin URI:        https://github.com/Cyklavandra-se/cv-kanalpublicering
- * Description:       Skriv ett utskick en gång och skapa utkast för nyhetsbrev (Mailchimp) och blogginlägg. Facebook och Instagram kommer i fas 2.
- * Version:           0.1.0
+ * Description:       Skriv ett utskick en gång och skapa utkast för nyhetsbrev (Mailchimp), blogginlägg, Facebook och Instagram. Inget publiceras utan godkännande.
+ * Version:           0.2.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Cykla & Vandra
@@ -13,17 +13,21 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'CVKP_VERSION', '0.1.0' );
+define( 'CVKP_VERSION', '0.2.0' );
 define( 'CVKP_FILE', __FILE__ );
 define( 'CVKP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CVKP_URL', plugin_dir_url( __FILE__ ) );
 
 require_once CVKP_DIR . 'includes/class-settings.php';
+require_once CVKP_DIR . 'includes/class-wpml.php';
 require_once CVKP_DIR . 'includes/class-trip-data.php';
 require_once CVKP_DIR . 'includes/class-trip-meta-box.php';
 require_once CVKP_DIR . 'includes/class-email-renderer.php';
 require_once CVKP_DIR . 'includes/class-blog-renderer.php';
 require_once CVKP_DIR . 'includes/class-mailchimp.php';
+require_once CVKP_DIR . 'includes/class-meta.php';
+require_once CVKP_DIR . 'includes/class-instagram-images.php';
+require_once CVKP_DIR . 'includes/class-social.php';
 require_once CVKP_DIR . 'includes/class-mailing.php';
 require_once CVKP_DIR . 'includes/class-latest-redirect.php';
 
@@ -34,5 +38,8 @@ add_action(
 		CVKP_Trip_Meta_Box::init();
 		CVKP_Mailing::init();
 		CVKP_Latest_Redirect::init();
+		CVKP_Social::init();
 	}
 );
+
+register_deactivation_hook( __FILE__, array( 'CVKP_Social', 'deactivate' ) );

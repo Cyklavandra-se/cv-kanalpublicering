@@ -16,6 +16,7 @@ class CVKP_Settings {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
 		add_action( 'admin_init', array( __CLASS__, 'register' ) );
 		add_action( 'admin_post_cvkp_test_mailchimp', array( __CLASS__, 'test_mailchimp' ) );
+		add_action( 'admin_post_cvkp_test_meta', array( __CLASS__, 'test_meta' ) );
 	}
 
 	public static function defaults() {
@@ -35,6 +36,15 @@ class CVKP_Settings {
 			'instagram_url'     => 'https://www.instagram.com/cyklavandra.se/',
 			'blog_category'     => 0,
 			'latest_slug'       => 'aktuellt',
+			// Fas 2: Facebook och Instagram.
+			'meta_token'        => '',
+			'meta_page_id'      => '',
+			'meta_ig_id'        => '',
+			'meta_version'      => 'v24.0',
+			'team'              => 'Anders, Ingrid, Sarah, Pär',
+			'ig_hashtags'       => '#cyklavandra',
+			'ig_link_text'      => 'Läs mer via länken i vår bio → Aktuellt',
+			'ig_ratio'          => '4:5',
 		);
 	}
 
@@ -49,6 +59,19 @@ class CVKP_Settings {
 			return (string) CVKP_MAILCHIMP_API_KEY;
 		}
 		return (string) self::get( 'mailchimp_api_key' );
+	}
+
+	/** Metas sidtoken läses helst från wp-config.php (define( 'CVKP_META_PAGE_TOKEN', '...' );). */
+	public static function meta_token() {
+		if ( defined( 'CVKP_META_PAGE_TOKEN' ) && CVKP_META_PAGE_TOKEN ) {
+			return (string) CVKP_META_PAGE_TOKEN;
+		}
+		return (string) self::get( 'meta_token' );
+	}
+
+	/** Teamets namn som lista. */
+	public static function team() {
+		return array_values( array_filter( array_map( 'trim', explode( ',', (string) self::get( 'team' ) ) ) ) );
 	}
 
 	public static function menu() {
@@ -76,9 +99,21 @@ class CVKP_Settings {
 			$value = isset( $input[ $key ] ) ? $input[ $key ] : $default;
 			switch ( $key ) {
 				case 'mailchimp_api_key':
+				case 'meta_token':
 					// Tomt fält = behåll sparad nyckel.
-					$value = trim( (string) $value );
-					$out[ $key ] = '' === $value ? $old['mailchimp_api_key'] : sanitize_text_field( $value );
+					$value       = trim( (string) $value );
+					$out[ $key ] = '' === $value ? $old[ $key ] : sanitize_text_field( $value );
+					break;
+				case 'meta_page_id':
+				case 'meta_ig_id':
+					$out[ $key ] = preg_replace( '/[^0-9]/', '', (string) $value );
+					break;
+				case 'meta_version':
+					$value       = trim( (string) $value );
+					$out[ $key ] = preg_match( '/^v\d+\.\d+$/', $value ) ? $value : $default;
+					break;
+				case 'ig_ratio':
+					$out[ $key ] = isset( CVKP_Instagram_Images::RATIOS[ $value ] ) ? $value : $default;
 					break;
 				case 'reply_to':
 					$out[ $key ] = sanitize_email( $value );
@@ -109,6 +144,9 @@ class CVKP_Settings {
 		if ( ! empty( $input['clear_api_key'] ) ) {
 			$out['mailchimp_api_key'] = '';
 		}
+		if ( ! empty( $input['clear_meta_token'] ) ) {
+			$out['meta_token'] = '';
+		}
 		return $out;
 	}
 
@@ -125,6 +163,10 @@ class CVKP_Settings {
 			<h1>Kanalpublicering – inställningar</h1>
 			<?php
 			$test = get_transient( 'cvkp_test_' . get_current_user_id() );
+			if ( isset( $_GET['cvkp_meta_test'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+				$test = get_transient( 'cvkp_test_meta_' . get_current_user_id() );
+				delete_transient( 'cvkp_test_meta_' . get_current_user_id() );
+			}
 			if ( $test ) {
 				delete_transient( 'cvkp_test_' . get_current_user_id() );
 				printf(
@@ -199,6 +241,53 @@ class CVKP_Settings {
 					<?php self::text_row( 'latest_slug', 'Fast adress till senaste inlägget', $o, 'Till exempel "aktuellt" ger ' . home_url( '/aktuellt' ) . ' – lägg den i Linktree.' ); ?>
 				</table>
 
+				<h2>Facebook och Instagram</h2>
+				<p>Se <a href="https://github.com/Cyklavandra-se/cv-kanalpublicering/blob/main/docs/meta-installation.md" target="_blank">docs/meta-installation.md</a> för hur appen och token skapas. Inget publiceras utan att någon klickar på <em>Schemalägg</em> i ett utskick.</p>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="cvkp-meta-token">Sidtoken (Page access token)</label></th>
+						<td>
+							<?php if ( defined( 'CVKP_META_PAGE_TOKEN' ) && CVKP_META_PAGE_TOKEN ) : ?>
+								<p><strong>Token är satt i wp-config.php.</strong></p>
+							<?php else : ?>
+								<input type="password" id="cvkp-meta-token" class="regular-text" autocomplete="off"
+									name="<?php echo esc_attr( $name ); ?>[meta_token]" value=""
+									placeholder="<?php echo esc_attr( '' !== self::meta_token() ? '•••••••• (sparad – lämna tomt för att behålla)' : 'EAA…' ); ?>">
+								<?php if ( '' !== self::meta_token() ) : ?>
+									<label><input type="checkbox" name="<?php echo esc_attr( $name ); ?>[clear_meta_token]" value="1"> Ta bort sparad token</label>
+								<?php endif; ?>
+								<p class="description">Säkrast i wp-config.php: <code>define( 'CVKP_META_PAGE_TOKEN', '...' );</code></p>
+							<?php endif; ?>
+						</td>
+					</tr>
+					<?php
+					self::text_row( 'meta_page_id', 'Facebook-sidans ID', $o, 'Lämna tomt – fylls i av "Testa anslutningen till Meta".' );
+					self::text_row( 'meta_ig_id', 'Instagram-kontots ID', $o, 'Lämna tomt – fylls i av testet om Instagram är kopplat till sidan.' );
+					self::text_row( 'meta_version', 'Graph API-version', $o, 'Till exempel v24.0. Byt när Meta slutar stödja versionen.' );
+					self::text_row( 'team', 'Teamet (för hälsningar)', $o, 'Kommaseparerat. Den som väljs i utskicket hälsar i Instagram-texten.' );
+					self::text_row( 'ig_hashtags', 'Fasta hashtaggar', $o, 'Kommer alltid med i förslaget. Förslaget fylls på från resorna till högst 5.' );
+					self::text_row( 'ig_link_text', 'Länkrad på Instagram', $o, 'Länkar går inte att klicka i Instagram-texter – hänvisa till Aktuellt i bion.' );
+					?>
+					<tr>
+						<th scope="row"><label for="cvkp-ig_ratio">Bildformat på Instagram</label></th>
+						<td>
+							<select id="cvkp-ig_ratio" name="<?php echo esc_attr( $name ); ?>[ig_ratio]">
+								<?php
+								$labels = array(
+									'4:5'    => '4:5 stående (störst i flödet)',
+									'1:1'    => '1:1 kvadrat',
+									'1.91:1' => '1.91:1 liggande (som resornas utvalda bilder)',
+								);
+								foreach ( $labels as $value => $label ) {
+									printf( '<option value="%s" %s>%s</option>', esc_attr( $value ), selected( $o['ig_ratio'], $value, false ), esc_html( $label ) );
+								}
+								?>
+							</select>
+							<p class="description">Bilderna beskärs från mitten. Originalen ändras inte.</p>
+						</td>
+					</tr>
+				</table>
+
 				<?php submit_button( 'Spara inställningar' ); ?>
 			</form>
 
@@ -206,6 +295,11 @@ class CVKP_Settings {
 				<input type="hidden" name="action" value="cvkp_test_mailchimp">
 				<?php wp_nonce_field( 'cvkp_test_mailchimp' ); ?>
 				<?php submit_button( 'Testa anslutningen till Mailchimp', 'secondary', 'submit', false ); ?>
+			</form>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top:8px">
+				<input type="hidden" name="action" value="cvkp_test_meta">
+				<?php wp_nonce_field( 'cvkp_test_meta' ); ?>
+				<?php submit_button( 'Testa anslutningen till Meta', 'secondary', 'submit', false ); ?>
 			</form>
 		</div>
 		<?php
@@ -253,6 +347,36 @@ class CVKP_Settings {
 			60
 		);
 		wp_safe_redirect( admin_url( 'options-general.php?page=cvkp-settings' ) );
+		exit;
+	}
+
+	public static function test_meta() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( 'Behörighet saknas.' );
+		}
+		check_admin_referer( 'cvkp_test_meta' );
+
+		$meta   = new CVKP_Meta();
+		$result = $meta->test();
+		if ( is_wp_error( $result ) ) {
+			$notice = array( 'ok' => false, 'message' => 'Meta svarade inte som väntat: ' . $result->get_error_message() );
+		} else {
+			// Spara sid- och Instagram-ID som testet hittade.
+			$opts = get_option( self::OPTION, array() );
+			$opts = is_array( $opts ) ? $opts : array();
+			if ( '' !== $result['page_id'] ) {
+				$opts['meta_page_id'] = $result['page_id'];
+			}
+			if ( '' !== $result['ig_id'] ) {
+				$opts['meta_ig_id'] = $result['ig_id'];
+			}
+			// Utan sanitize-filtret: värdena kommer från Meta och är redan bara siffror.
+			remove_all_filters( 'sanitize_option_' . self::OPTION );
+			update_option( self::OPTION, $opts );
+			$notice = array( 'ok' => '' !== $result['ig_id'], 'message' => $result['message'] );
+		}
+		set_transient( 'cvkp_test_meta_' . get_current_user_id(), $notice, 60 );
+		wp_safe_redirect( admin_url( 'options-general.php?page=cvkp-settings&cvkp_meta_test=1' ) );
 		exit;
 	}
 }
