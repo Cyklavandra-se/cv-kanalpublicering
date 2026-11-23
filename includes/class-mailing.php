@@ -239,7 +239,7 @@ class CVKP_Mailing {
 			<div class="cvkp-trip-head">
 				<span class="cvkp-trip-thumb"><?php if ( $data && $data['image_url'] ) : ?><img src="<?php echo esc_url( $data['image_url'] ); ?>" alt=""><?php endif; ?></span>
 				<span class="cvkp-trip-title"><?php echo $data ? esc_html( $data['title'] ) : ''; ?></span>
-				<a class="cvkp-trip-link" href="<?php echo $data ? esc_url( $data['url'] ) : '#'; ?>" target="_blank">Visa resan ↗</a>
+				<a class="cvkp-trip-link" href="<?php echo $data ? esc_url( $data['url'] ) : '#'; ?>" target="_blank" rel="noopener">Visa resan ↗</a>
 				<span class="cvkp-trip-actions">
 					<button type="button" class="button-link cvkp-up" aria-label="Flytta upp">↑</button>
 					<button type="button" class="button-link cvkp-down" aria-label="Flytta ner">↓</button>
@@ -321,7 +321,7 @@ class CVKP_Mailing {
 		echo '<hr><p><strong>Status</strong></p><ul class="cvkp-status">';
 		if ( is_array( $mc ) && ! empty( $mc['url'] ) ) {
 			printf(
-				'<li>Mailchimp: <a href="%s" target="_blank">öppna utkastet ↗</a><br><span class="description">Uppdaterat %s</span></li>',
+				'<li>Mailchimp: <a href="%s" target="_blank" rel="noopener">öppna utkastet ↗</a><br><span class="description">Uppdaterat %s</span></li>',
 				esc_url( $mc['url'] ),
 				esc_html( wp_date( 'j M H:i', (int) $mc['time'] ) )
 			);
@@ -330,7 +330,7 @@ class CVKP_Mailing {
 		}
 		if ( $blog_id && get_post( $blog_id ) ) {
 			printf(
-				'<li>Blogg: <a href="%s">%s</a> (%s)</li>',
+				'<li>Blogg: <a href="%s" target="_blank" rel="noopener">%s ↗</a> (%s)</li>',
 				esc_url( get_edit_post_link( $blog_id ) ),
 				esc_html( get_the_title( $blog_id ) ),
 				esc_html( 'publish' === get_post_status( $blog_id ) ? 'publicerat' : 'utkast' )
@@ -525,7 +525,7 @@ class CVKP_Mailing {
 						'type'    => 'success',
 						'message' => sprintf( 'Mailchimp: utkastet är %s. Öppna det i Mailchimp, skicka ett test och skicka sedan som vanligt.', $result['created'] ? 'skapat' : 'uppdaterat' ),
 						'link'    => $result['url'],
-						'linkText' => 'Öppna i Mailchimp ↗',
+						'linkText' => 'Öppna i Mailchimp',
 					);
 				}
 			}
@@ -599,7 +599,8 @@ class CVKP_Mailing {
 		}
 		delete_transient( $key );
 		foreach ( $notices as $n ) {
-			$link = ! empty( $n['link'] ) ? sprintf( ' <a href="%s"%s>%s</a>', esc_url( $n['link'] ), false !== strpos( $n['link'], 'mailchimp.com' ) ? ' target="_blank"' : '', esc_html( $n['linkText'] ) ) : '';
+			// Länkarna leder till Mailchimp eller blogginlägget – alltid i ny flik, så utskicket är kvar.
+			$link = ! empty( $n['link'] ) ? sprintf( ' <a href="%s" target="_blank" rel="noopener">%s ↗</a>', esc_url( $n['link'] ), esc_html( $n['linkText'] ) ) : '';
 			printf( '<div class="notice notice-%s is-dismissible"><p>%s%s</p></div>', esc_attr( $n['type'] ), esc_html( $n['message'] ), $link ); // phpcs:ignore WordPress.Security.EscapeOutput
 		}
 	}
