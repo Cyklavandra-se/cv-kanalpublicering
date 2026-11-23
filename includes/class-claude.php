@@ -90,7 +90,7 @@ class CVKP_Claude {
 		<div id="cvkp-claude" class="postbox cvkp-claude">
 			<div class="postbox-header"><h2>Claude – fyll i utskicket</h2></div>
 			<div class="inside">
-				<p class="description">Klistra in länkar till resorna ni vill lyfta fram, en per rad. Varje resa läggs till under Resor med första stycket från resesidan som text. Claude skriver sedan ingress (om ni inte skriver en själva), ämnesrad, förhandstext, rubriker, blogg-utdrag och texterna till Facebook och Instagram. <strong>Bara tomma fält fylls i</strong> – det som redan står ändras inte, och rabattkoden skriver ni själva. Fyll gärna i rabattkod och vem som hälsar på Instagram först, så kommer de med i texterna.</p>
+				<p class="description">Klistra in länkar till resorna ni vill lyfta fram, en per rad. Varje resa läggs till under Resor med de två första styckena från resesidan som text. Claude skriver sedan ingress (om ni inte skriver en själva), ämnesrad, förhandstext, rubriker, blogg-utdrag och texterna till Facebook och Instagram. <strong>Bara tomma fält fylls i</strong> – det som redan står ändras inte, och rabattkoden skriver ni själva. Fyll gärna i rabattkod och vem som hälsar på Instagram först, så kommer de med i texterna.</p>
 				<div class="cvkp-cols">
 					<p class="cvkp-field">
 						<label for="cvkp-claude-intro"><strong>Ingress (valfri)</strong></label>
@@ -186,9 +186,9 @@ class CVKP_Claude {
 				$warnings[] = 'Hittade ingen sida för ' . $url;
 				continue;
 			}
-			$text = self::first_paragraph( $id );
+			$text = self::first_paragraphs( $id, 2 );
 			if ( '' === $text ) {
-				$warnings[] = 'Hittade inget stycke på ' . get_the_title( $id ) . ' – fyll i texten själv';
+				$warnings[] = 'Hittade ingen text på ' . get_the_title( $id ) . ' – fyll i texten själv';
 			}
 			if ( ! CVKP_Trip_Data::is_trip( $id ) ) {
 				$warnings[] = html_entity_decode( get_the_title( $id ), ENT_QUOTES, 'UTF-8' ) . ' är inte taggad cykla/vandra – kontrollera att det är en resa';
@@ -246,29 +246,57 @@ class CVKP_Claude {
 		return ( $id && 'page' === get_post_type( $id ) ) ? $id : 0;
 	}
 
+	/** Avadas kortkoder vars innehåll är en bild, ett galleri eller en video – aldrig text. */
+	const MEDIA_SHORTCODES = 'fusion_imageframe|fusion_image|fusion_gallery_image|fusion_gallery|fusion_image_before_after|fusion_images|fusion_youtube|fusion_vimeo|fusion_video|fusion_map|fusion_code|fusion_slide|fusion_slider|fusion_post_slider';
+
 	/**
-	 * Första riktiga stycket i sidtexten. Avadas kortkoder blir styckebrytningar, och
-	 * korta stycken (rubriker, "ca 63 km") hoppas över.
+	 * De första riktiga styckena i sidtexten (standard två), med en tom rad emellan.
+	 *
+	 * Avadas bild- och videokortkoder tas bort med sitt innehåll (det är bildadresser),
+	 * övriga kortkoder blir styckebrytningar. Korta stycken (rubriker, "ca 63 km") och
+	 * stycken som bara är en adress hoppas över.
 	 */
-	public static function first_paragraph( $post_id ) {
+	public static function first_paragraphs( $post_id, $count = 2 ) {
 		$post = get_post( $post_id );
 		if ( ! $post ) {
 			return '';
 		}
 		$html = (string) $post->post_content;
 		$html = preg_replace( '/<(script|style)[^>]*>.*?<\/\1>/is', ' ', $html );
+		$html = preg_replace( '/\[(' . self::MEDIA_SHORTCODES . ')\b[^\]]*\].*?\[\/\1\]/is', "\n\n", $html );
 		$html = preg_replace( '/\[\/?[a-z_]+[^\]]*\]/i', "\n\n", $html );
 		$html = wpautop( $html );
 		if ( ! preg_match_all( '/<p[^>]*>(.*?)<\/p>/is', $html, $m ) ) {
 			return '';
 		}
+		$found = array();
 		foreach ( $m[1] as $paragraph ) {
 			$text = trim( preg_replace( '/\s+/u', ' ', html_entity_decode( wp_strip_all_tags( $paragraph ), ENT_QUOTES, 'UTF-8' ) ) );
-			if ( CVKP_Social::length( $text ) >= self::MIN_PARAGRAPH ) {
-				return $text;
+			if ( ! self::is_prose( $text ) ) {
+				continue;
+			}
+			$found[] = $text;
+			if ( count( $found ) >= $count ) {
+				break;
 			}
 		}
-		return '';
+		return implode( "\n\n", $found );
+	}
+
+	/** Riktig löptext: tillräckligt lång, flera ord och inte bara en adress eller ett filnamn. */
+	public static function is_prose( $text ) {
+		if ( CVKP_Social::length( $text ) < self::MIN_PARAGRAPH ) {
+			return false;
+		}
+		if ( preg_match( '#^\S*(https?://|www\.|\.(jpe?g|png|webp|gif|pdf)\b)\S*$#i', $text ) ) {
+			return false;
+		}
+		// Minst åtta ord, och mindre än hälften av texten får vara adresser.
+		if ( count( preg_split( '/\s+/u', $text ) ) < 8 ) {
+			return false;
+		}
+		$urls = preg_match_all( '#https?://\S+#i', $text, $u ) ? strlen( implode( '', $u[0] ) ) : 0;
+		return $urls * 2 < strlen( $text );
 	}
 
 	/* ------------------------------------------------------------------ */
