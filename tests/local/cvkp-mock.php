@@ -1,7 +1,16 @@
 <?php
-// Testmock: Mailchimp och Graph API. Loggar alla anrop till wp-content/cvkp-mock.log.
+// Testmock: Mailchimp, Graph API och GitHub-releaser. Loggar alla anrop till wp-content/cvkp-mock.log.
 add_filter( 'pre_http_request', function ( $pre, $args, $url ) {
 	$host = wp_parse_url( $url, PHP_URL_HOST );
+	// GitHub: senaste release (versionen styrs av optionen cvkp_mock_release, t.ex. "0.4.0").
+	if ( 'api.github.com' === $host && false !== strpos( $url, '/cv-kanalpublicering/releases/latest' ) ) {
+		$v = get_option( 'cvkp_mock_release', '' );
+		$body = $v ? array( 'tag_name' => 'v' . $v, 'html_url' => 'https://github.com/cyklavandra-se/cv-kanalpublicering/releases/tag/v' . $v, 'body' => "## Nytt\n- **Test** av uppdatering", 'published_at' => '2026-11-23T10:00:00Z', 'assets' => array( array( 'name' => 'cv-kanalpublicering.zip', 'browser_download_url' => 'https://github.com/cyklavandra-se/cv-kanalpublicering/releases/download/v' . $v . '/cv-kanalpublicering.zip' ) ) ) : array( 'message' => 'Not Found' );
+		return array( 'headers' => array(), 'body' => wp_json_encode( $body ), 'response' => array( 'code' => $v ? 200 : 404, 'message' => '' ), 'cookies' => array(), 'filename' => null );
+	}
+	if ( 'api.wordpress.org' === $host ) {
+		return array( 'headers' => array(), 'body' => wp_json_encode( array( 'plugins' => array(), 'translations' => array(), 'no_update' => array() ) ), 'response' => array( 'code' => 200, 'message' => '' ), 'cookies' => array(), 'filename' => null );
+	}
 	if ( ! preg_match( '/(api\.mailchimp\.com|graph\.facebook\.com)$/', (string) $host ) ) {
 		return $pre;
 	}

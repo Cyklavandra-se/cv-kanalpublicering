@@ -8,9 +8,9 @@ Ta en säkerhetskopia av sajten (eller kontrollera att webbhotellets dagliga kop
 
 ## 2. Ladda upp tillägget
 
-1. Ladda ner `cv-kanalpublicering.zip`. Bygg den själv med `bin/build-zip.sh` eller använd den du fått. Använd **inte** GitHubs "Download ZIP". Den ger mappen fel namn (`cv-kanalpublicering-fas-1`), och då blir nästa uppdatering ett nytt tillägg i stället för en uppdatering.
+1. Ladda ner `cv-kanalpublicering.zip`. Ta den från senaste releasen på GitHub, bygg den med `bin/build-zip.sh` eller använd den du fått. Använd **inte** GitHubs "Download ZIP". Den ger mappen fel namn (`cv-kanalpublicering-main`).
 2. **Tillägg → Lägg till nytt → Ladda upp tillägg**, välj zip-filen, **Installera nu** och **Aktivera**.
-3. Vid senare uppdateringar laddar du upp den nya zip-filen på samma sätt och väljer **Ersätt nuvarande med uppladdad**.
+3. Därefter kommer nya versioner som vanliga uppdateringar under **Tillägg**, på samma sätt som Bokningsformulär. **Sök efter uppdatering** frågar GitHub direkt. Releaser skapas automatiskt när en ny version pushas till `main`. Innan tillägget finns på `main` finns ingen release, och då svarar "Sök efter uppdatering" att ingen release hittades. Det är väntat.
 
 ## 3. Mailchimp-nyckeln i wp-config.php
 

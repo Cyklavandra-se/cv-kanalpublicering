@@ -17,8 +17,8 @@ Se **[docs/installation.md](docs/installation.md)** (installation och test mot M
 
 Kortversion:
 
-1. Bygg zip-filen med `bin/build-zip.sh`, eller ladda ner den från en release. GitHubs "Download ZIP" ger fel mappnamn.
-2. **Tillägg → Lägg till nytt → Ladda upp tillägg** och aktivera.
+1. Ladda ner `cv-kanalpublicering.zip` från senaste [release](https://github.com/Cyklavandra-se/cv-kanalpublicering/releases/latest), eller bygg den med `bin/build-zip.sh`. GitHubs "Download ZIP" ger fel mappnamn.
+2. **Tillägg → Lägg till nytt → Ladda upp tillägg** och aktivera. Efter det kommer nya versioner som vanliga uppdateringar under Tillägg, som för Bokningsformulär.
 3. Lägg nycklarna i `wp-config.php`. Lägg dem aldrig i det här repot, det är publikt.
 
    ```php
@@ -40,6 +40,12 @@ Kortversion:
 7. Under **Facebook och Instagram**: granska texter och bilder, välj tid och klicka **Schemalägg**. Facebook kräver att blogginlägget är publicerat.
 
 Ett blogginlägg som redan är publicerat ändras aldrig av tillägget. Ändra det direkt i inlägget.
+
+## Uppdateringar
+
+Tillägget uppdateras från GitHub på samma sätt som Bokningsformulär. Under **Tillägg** finns länken **Sök efter uppdatering**, och nya versioner kan installeras med **Uppdatera nu**.
+
+Så släpps en ny version: höj `Version:` i `cv-kanalpublicering.php` och pusha till `main`. GitHub Actions (`.github/workflows/release.yml`) skapar då taggen `vX.Y.Z` och en release med `cv-kanalpublicering.zip`. Taggar skapas aldrig för hand. Repot måste vara publikt, annars når sajten inte releaserna.
 
 ## Behörighet
 
