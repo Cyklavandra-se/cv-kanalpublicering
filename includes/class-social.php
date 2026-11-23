@@ -648,7 +648,7 @@ class CVKP_Social {
 		if ( ! empty( $draft['images'] ) ) {
 			echo '<p><strong>Bilder i karusellen</strong> <span class="description">(' . esc_html( CVKP_Instagram_Images::ratio_key() ) . ', i resornas ordning – välj bild per resa under Resor)</span></p><div class="cvkp-ig-preview">';
 			foreach ( $draft['images'] as $i => $image ) {
-				printf( '<a href="%1$s" target="_blank" title="Öppna/ladda ner"><img src="%1$s" alt=""><span>%2$d</span></a>', esc_url( $image['url'] ), (int) $i + 1 );
+				printf( '<a href="%1$s" target="_blank" rel="noopener" title="Öppna/ladda ner"><img src="%1$s" alt=""><span>%2$d</span></a>', esc_url( $image['url'] ), (int) $i + 1 );
 			}
 			echo '</div>';
 			$hint = self::hashtag_hint( isset( $draft['caption'] ) ? $draft['caption'] : '' );
@@ -688,7 +688,7 @@ class CVKP_Social {
 				printf(
 					'<p><span class="cvkp-badge cvkp-badge-published">Publicerat</span> %s %s</p></div>',
 					esc_html( wp_date( 'j F Y H:i', (int) ( isset( $state['result']['time'] ) ? $state['result']['time'] : 0 ) ) ),
-					! empty( $state['result']['permalink'] ) ? '<a href="' . esc_url( $state['result']['permalink'] ) . '" target="_blank">Visa ↗</a>' : ''
+					! empty( $state['result']['permalink'] ) ? '<a href="' . esc_url( $state['result']['permalink'] ) . '" target="_blank" rel="noopener">Visa ↗</a>' : ''
 				);
 				echo '<p class="description" style="margin-top:-6px">Skapa ett nytt utskick för nästa inlägg.</p>';
 				return;
