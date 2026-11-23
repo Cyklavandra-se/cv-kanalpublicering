@@ -21,7 +21,7 @@ Ta en säkerhetskopia av sajten (eller kontrollera att webbhotellets dagliga kop
    define( 'CVKP_MAILCHIMP_API_KEY', 'nyckeln-som-slutar-med-us1' );
    ```
 
-3. **Inställningar → Kanalpublicering → Testa anslutningen till Mailchimp.** Du ska få se *"Anslutningen fungerar. Listan … har N prenumeranter."*
+3. **Cykla&Vandra → Kanalpublicering → Testa anslutningen till Mailchimp.** Du ska få se *"Anslutningen fungerar. Listan … har N prenumeranter."*
 
 Om testet misslyckas:
 
@@ -34,7 +34,7 @@ Om testet misslyckas:
 
 ## 4. Kontrollera inställningarna
 
-Under **Inställningar → Kanalpublicering**:
+Under **Cykla&Vandra → Kanalpublicering**:
 
 - Avsändarnamn **Cykla & Vandra**, avsändare **nyhetsbrev@cyklavandra.se**. Adressen måste vara verifierad i Mailchimp, och domänen bör vara autentiserad under Website → Domains.
 - Loggan och adressen i footern.
@@ -70,7 +70,7 @@ Under **Inställningar → Kanalpublicering**:
 
 ## 8. Behörighet
 
-Logga in som Sarah (Redaktör) och kontrollera att hon ser menyn **Utskick** och kan skapa utkast, men inte **Inställningar → Kanalpublicering**.
+Logga in som Sarah (Redaktör) och kontrollera att hon ser **Cykla&Vandra → Utskick** och kan skapa utkast, men inte **Cykla&Vandra → Kanalpublicering**.
 
 ## 9. Facebook och Instagram
 

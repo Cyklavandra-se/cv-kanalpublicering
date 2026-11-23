@@ -43,6 +43,7 @@ Lista `aacb39e5d3`, server `us1`, avsändare `nyhetsbrev@cyklavandra.se`, betalt
 - `includes/class-social.php`: FB/IG-förslag, utkast, `schedule()`, `cancel()`, cron `cvkp_instagram_publish`, statusvy. Status i `_cvkp_facebook`/`_cvkp_instagram`: `none`, `scheduled`, `publishing`, `published` eller `failed`, plus `draft` och `scheduled`, som är en ögonblicksbild av det som godkändes.
 - `includes/class-meta.php`: Graph API (standard v24.0, går att ändra i inställningarna). `includes/class-instagram-images.php`: beskurna JPEG-kopior i `uploads/cvkp-instagram/`.
 - `includes/class-wpml.php` och `wpml-config.xml`: resor och blogginlägg hanteras alltid på standardspråket.
+- Menyn: tillägget ligger under den gemensamma menyn **Cykla&Vandra** (`cyklavandra-meny.php`, samma fil kopieras oförändrad till alla våra tillägg – Bokningsformulär, AI-sök m.fl.; ändras den ska alla kopior uppdateras och `VERSION` höjas). Kortet på översikten läggs till via filtret `cyklavandra_verktyg`; ikon `assets/icon.svg` i samma stil som de andra.
 - `bin/build-zip.sh` bygger zip-filen för uppladdning. Mappen i zip-filen måste heta `cv-kanalpublicering/`.
 
 ## Testa

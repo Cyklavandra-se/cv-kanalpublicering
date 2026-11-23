@@ -26,7 +26,7 @@ Kortversion:
    define( 'CVKP_META_PAGE_TOKEN', 'EAA…' ); // Facebook och Instagram, se docs/meta-installation.md
    ```
 
-4. **Inställningar → Kanalpublicering**: kontrollera uppgifterna och testa anslutningarna.
+4. **Cykla&Vandra → Kanalpublicering**: kontrollera uppgifterna och testa anslutningarna.
 5. Lägg `https://cyklavandra.se/aktuellt` i Linktree och i Instagram-bion.
 
 ## Använda

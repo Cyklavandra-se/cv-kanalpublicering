@@ -12,8 +12,40 @@ class CVKP_Settings {
 	/** Behörighet för att använda verktyget (Redaktör och Administratör). */
 	const CAPABILITY = 'edit_others_posts';
 
+	/** Inställningssidan under menyn Cykla&Vandra. */
+	const PAGE = 'cvkp-settings';
+
+	public static function page_url( $args = array() ) {
+		return add_query_arg( array_merge( array( 'page' => self::PAGE ), $args ), admin_url( 'admin.php' ) );
+	}
+
+	/** Kortet på översiktssidan Cykla&Vandra. */
+	public static function tool_card( $verktyg ) {
+		if ( ! current_user_can( self::CAPABILITY ) ) {
+			return $verktyg;
+		}
+		$verktyg[] = array(
+			'titel'       => 'Kanalpublicering',
+			'beskrivning' => 'Skriv ett utskick en gång och skapa utkast för nyhetsbrev, blogg, Facebook och Instagram.',
+			'url'         => admin_url( 'edit.php?post_type=cvkp_utskick' ),
+			'version'     => CVKP_VERSION,
+			'ikon'        => CVKP_URL . 'assets/icon.svg',
+		);
+		return $verktyg;
+	}
+
+	/** Länk "Inställningar" i tilläggslistan. */
+	public static function settings_link( $links, $file ) {
+		if ( plugin_basename( CVKP_FILE ) === $file && current_user_can( 'manage_options' ) ) {
+			array_unshift( $links, '<a href="' . esc_url( self::page_url() ) . '">Inställningar</a>' );
+		}
+		return $links;
+	}
+
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
+		add_filter( 'cyklavandra_verktyg', array( __CLASS__, 'tool_card' ) );
+		add_filter( 'plugin_action_links', array( __CLASS__, 'settings_link' ), 5, 2 );
 		add_action( 'admin_init', array( __CLASS__, 'register' ) );
 		add_action( 'admin_post_cvkp_test_mailchimp', array( __CLASS__, 'test_mailchimp' ) );
 		add_action( 'admin_post_cvkp_test_meta', array( __CLASS__, 'test_meta' ) );
@@ -75,11 +107,12 @@ class CVKP_Settings {
 	}
 
 	public static function menu() {
-		add_options_page(
-			'Kanalpublicering',
+		add_submenu_page(
+			Cyklavandra_Meny::SLUG,
+			'Kanalpublicering – inställningar',
 			'Kanalpublicering',
 			'manage_options',
-			'cvkp-settings',
+			self::PAGE,
 			array( __CLASS__, 'render' )
 		);
 	}
@@ -346,7 +379,7 @@ class CVKP_Settings {
 				: array( 'ok' => true, 'message' => $result ),
 			60
 		);
-		wp_safe_redirect( admin_url( 'options-general.php?page=cvkp-settings' ) );
+		wp_safe_redirect( self::page_url() );
 		exit;
 	}
 
@@ -376,7 +409,7 @@ class CVKP_Settings {
 			$notice = array( 'ok' => '' !== $result['ig_id'], 'message' => $result['message'] );
 		}
 		set_transient( 'cvkp_test_meta_' . get_current_user_id(), $notice, 60 );
-		wp_safe_redirect( admin_url( 'options-general.php?page=cvkp-settings&cvkp_meta_test=1' ) );
+		wp_safe_redirect( self::page_url( array( 'cvkp_meta_test' => 1 ) ) );
 		exit;
 	}
 }

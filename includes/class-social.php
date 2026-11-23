@@ -410,7 +410,7 @@ class CVKP_Social {
 
 		if ( 'facebook' === $channel ) {
 			if ( ! $meta->facebook_ready() ) {
-				return array( 'type' => 'error', 'message' => 'Facebook: anslutningen till Meta är inte inställd (Inställningar → Kanalpublicering).' );
+				return array( 'type' => 'error', 'message' => 'Facebook: anslutningen till Meta är inte inställd (Cykla&Vandra → Kanalpublicering).' );
 			}
 			if ( empty( $draft['link'] ) ) {
 				return array( 'type' => 'error', 'message' => 'Facebook: publicera blogginlägget först (eller fyll i en egen länk).' );
@@ -430,7 +430,7 @@ class CVKP_Social {
 			);
 		} else {
 			if ( ! $meta->instagram_ready() ) {
-				return array( 'type' => 'error', 'message' => 'Instagram: anslutningen till Meta är inte inställd (Inställningar → Kanalpublicering). Bilderna och texten går att lägga upp för hand.' );
+				return array( 'type' => 'error', 'message' => 'Instagram: anslutningen till Meta är inte inställd (Cykla&Vandra → Kanalpublicering). Bilderna och texten går att lägga upp för hand.' );
 			}
 			$problems = self::instagram_problems( $draft );
 			if ( $problems ) {

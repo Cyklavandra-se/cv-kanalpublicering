@@ -18,6 +18,7 @@ define( 'CVKP_FILE', __FILE__ );
 define( 'CVKP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CVKP_URL', plugin_dir_url( __FILE__ ) );
 
+require_once CVKP_DIR . 'cyklavandra-meny.php'; // Gemensam meny Cykla&Vandra, samma fil i alla våra tillägg.
 require_once CVKP_DIR . 'includes/class-settings.php';
 require_once CVKP_DIR . 'includes/class-wpml.php';
 require_once CVKP_DIR . 'includes/class-trip-data.php';
