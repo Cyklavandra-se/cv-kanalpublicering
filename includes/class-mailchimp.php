@@ -59,7 +59,7 @@ class CVKP_Mailchimp {
 	 */
 	public function save_draft( array $settings, $html, $existing_id = null ) {
 		if ( ! $this->is_configured() ) {
-			return new WP_Error( 'cvkp_no_key', 'Mailchimp-nyckeln saknas eller har fel format (ska sluta med t.ex. -us1). Se Cykla&Vandra → Kanalpublicering.' );
+			return new WP_Error( 'cvkp_no_key', 'Mailchimp-nyckeln saknas eller har fel format (ska sluta med t.ex. -us1). Se Cykla&Vandra → Kanalpublicering → Inställningar.' );
 		}
 
 		$body = array(

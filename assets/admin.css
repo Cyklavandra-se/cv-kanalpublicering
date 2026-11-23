@@ -43,3 +43,5 @@
 .cvkp-badge-published { background: #d1f0da; }
 .cvkp-badge-failed { background: #f8d7da; }
 .cvkp-warn { color: #b32d2e !important; }
+
+.cvkp-tabs { margin-bottom: 8px; }

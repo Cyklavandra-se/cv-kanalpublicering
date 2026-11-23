@@ -44,6 +44,7 @@ class CVKP_Settings {
 
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
+		add_action( 'admin_head', array( __CLASS__, 'hide_menu_item' ) );
 		add_filter( 'cyklavandra_verktyg', array( __CLASS__, 'tool_card' ) );
 		add_filter( 'plugin_action_links', array( __CLASS__, 'settings_link' ), 5, 2 );
 		add_action( 'admin_init', array( __CLASS__, 'register' ) );
@@ -115,6 +116,15 @@ class CVKP_Settings {
 			self::PAGE,
 			array( __CLASS__, 'render' )
 		);
+	}
+
+	/**
+	 * Döljer inställningarna i menyn – de nås via fliken Inställningar. Görs först i
+	 * admin_head: WordPress kontrollerar behörigheten mot menyn innan dess, och en
+	 * sida som tagits bort ur menyn tidigare ger "Du har inte behörighet".
+	 */
+	public static function hide_menu_item() {
+		remove_submenu_page( Cyklavandra_Meny::SLUG, self::PAGE );
 	}
 
 	public static function register() {
@@ -193,7 +203,9 @@ class CVKP_Settings {
 		$name       = self::OPTION;
 		?>
 		<div class="wrap">
-			<h1>Kanalpublicering – inställningar</h1>
+			<?php CVKP_Admin_Ui::tabs( 'settings' ); ?>
+			<h1>Inställningar</h1>
+			<?php settings_errors(); // Visar "Inställningarna sparades" (sker bara automatiskt under menyn Inställningar). ?>
 			<?php
 			$test = get_transient( 'cvkp_test_' . get_current_user_id() );
 			if ( isset( $_GET['cvkp_meta_test'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification

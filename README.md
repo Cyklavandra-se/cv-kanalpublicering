@@ -26,12 +26,12 @@ Kortversion:
    define( 'CVKP_META_PAGE_TOKEN', 'EAA…' ); // Facebook och Instagram, se docs/meta-installation.md
    ```
 
-4. **Cykla&Vandra → Kanalpublicering**: kontrollera uppgifterna och testa anslutningarna.
+4. **Cykla&Vandra → Kanalpublicering → Inställningar**: kontrollera uppgifterna och testa anslutningarna.
 5. Lägg `https://cyklavandra.se/aktuellt` i Linktree och i Instagram-bion.
 
 ## Använda
 
-1. **Utskick → Nytt utskick.** Ge det ett internt namn.
+1. **Cykla&Vandra → Kanalpublicering → Nytt utskick.** Ge det ett internt namn.
 2. Fyll i ämnesrad, förhandstext, rubrik, inledning och eventuell rabattkod.
 3. Under **Resor**: välj resa och klicka **Lägg till resa**. Bild, länk, typ och antal dagar hämtas från resesidan, och resans beskrivning läggs in som starttext. Skriv om texten, ändra rubrik eller etikett vid behov och sortera med pilarna. "Läs mer" läggs till automatiskt. Välj också bild för Instagram, eller ta bort resan från Instagram.
 4. **Förhandsgranska nyhetsbrevet** visar mejlet direkt, även osparade ändringar.
