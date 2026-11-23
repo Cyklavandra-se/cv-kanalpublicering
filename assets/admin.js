@@ -298,7 +298,8 @@
  * Osparade ändringar sparas i webbläsaren (localStorage) medan man skriver, så att
  * inget försvinner om sidan laddas om eller man råkar lämna den. När man kommer
  * tillbaka återställs ändringarna automatiskt, med en ruta som säger det.
- * Sparas utskicket på vanligt sätt tas kopian bort.
+ * Kopian tas bort först när sidan laddats om efter sparning och det som skrevs
+ * verkligen finns i det sparade utskicket. Misslyckades sparningen återställs allt.
  */
 ( function () {
 	'use strict';
@@ -312,7 +313,8 @@
 	var VERSION = 1;
 	var MAX_AGE = 14 * 24 * 3600 * 1000; // Äldre kopior än två veckor används inte.
 	// Ett nytt utskick får ett nytt id varje gång sidan öppnas, så det sparas under "nytt".
-	var key = 'cvkp-utskick-' + cfg.userId + '-' + ( cfg.isNew ? 'nytt' : cfg.postId );
+	var newKey = 'cvkp-utskick-' + cfg.userId + '-nytt';
+	var key = cfg.isNew ? newKey : 'cvkp-utskick-' + cfg.userId + '-' + cfg.postId;
 	var list = document.getElementById( 'cvkp-trip-list' );
 	var EXTRA_IDS = [ 'title', 'cvkp-claude-intro', 'cvkp-claude-links' ];
 	var lastSaved = '';
@@ -327,13 +329,13 @@
 		}
 	}
 
-	function read() {
+	function read( k ) {
 		var s = storage();
 		if ( ! s ) {
 			return null;
 		}
 		try {
-			var data = JSON.parse( s.getItem( key ) || 'null' );
+			var data = JSON.parse( s.getItem( k || key ) || 'null' );
 			return data && VERSION === data.v ? data : null;
 		} catch ( e ) {
 			return null;
@@ -412,7 +414,7 @@
 	}
 
 	function snapshot() {
-		var data = { v: VERSION, fields: {}, editors: {}, trips: tripHtml() };
+		var data = { v: VERSION, postId: cfg.postId, fields: {}, editors: {}, trips: tripHtml() };
 		fields().forEach( function ( f ) {
 			data.fields[ f.key ] = ( 'checkbox' === f.el.type || 'radio' === f.el.type ) ? f.el.checked : f.el.value;
 		} );
@@ -490,11 +492,13 @@
 		restoring = false;
 	}
 
-	function notice( savedAt ) {
+	function notice( savedAt, failed ) {
 		var box = document.createElement( 'div' );
-		box.className = 'notice notice-info cvkp-restored';
+		box.className = 'notice ' + ( failed ? 'notice-error' : 'notice-info' ) + ' cvkp-restored';
 		var time = new Date( savedAt ).toLocaleString( 'sv-SE', { dateStyle: 'short', timeStyle: 'short' } );
-		box.innerHTML = '<p><strong>Osparade ändringar från ' + time + ' är återställda.</strong> De har sparats i den här webbläsaren. Klicka på Spara för att spara dem i utskicket. <button type="button" class="button-link cvkp-discard">Släng ändringarna</button></p>';
+		box.innerHTML = failed
+			? '<p><strong>Utskicket sparades inte – det ni skrev är återställt från webbläsaren.</strong> Klicka på Spara igen. Säger det samma sak, kopiera texterna och hör av er till Pär. <button type="button" class="button-link cvkp-discard">Släng ändringarna</button></p>'
+			: '<p><strong>Osparade ändringar från ' + time + ' är återställda.</strong> De har sparats i den här webbläsaren. Klicka på Spara för att spara dem i utskicket. <button type="button" class="button-link cvkp-discard">Släng ändringarna</button></p>';
 		var anchor = document.querySelector( '.wp-header-end' );
 		( anchor ? anchor.parentNode : form.parentNode ).insertBefore( box, anchor ? anchor.nextSibling : form );
 		box.querySelector( '.cvkp-discard' ).addEventListener( 'click', function () {
@@ -506,9 +510,51 @@
 		} );
 	}
 
+	/** Fält som alltid sparas som de skrevs – finns de inte i det sparade utskicket gick sparningen fel. */
+	var CHECK = [ '#title', 'cvkp[subject]|1', 'cvkp[preheader]|1', 'cvkp[heading]|1', 'cvkp[fb_text]|1', 'cvkp[ig_text]|1' ];
+	function lostOnSave( data ) {
+		var now = snapshot();
+		var lost = CHECK.some( function ( k ) {
+			var before = String( data.fields[ k ] || '' ).trim();
+			return '' !== before && '' === String( now.fields[ k ] || '' ).trim();
+		} );
+		var tripsBefore = ( data.trips.match( /class="cvkp-trip"/g ) || [] ).length;
+		var tripsNow = ( now.trips.match( /class="cvkp-trip"/g ) || [] ).length;
+		return lost || tripsNow < tripsBefore;
+	}
+
 	// Återställ om det finns en kopia som är nyare än det sparade utskicket och skiljer sig från det.
 	var draft = read();
-	if ( draft && draft.savedAt && Date.now() - draft.savedAt < MAX_AGE && ( cfg.isNew || draft.savedAt > cfg.modified * 1000 ) ) {
+	if ( ! cfg.isNew ) {
+		// Ett nytt utskick som just sparats för första gången har sin kopia under "nytt".
+		var fresh = read( newKey );
+		if ( fresh && fresh.submitted && fresh.postId === cfg.postId ) {
+			draft = fresh;
+			var s0 = storage();
+			if ( s0 ) {
+				try {
+					s0.removeItem( newKey );
+				} catch ( e ) {}
+			}
+		}
+	} else if ( draft && draft.submitted ) {
+		// Gammal kopia från ett nytt utskick som redan har sparats och kontrollerats.
+		remove();
+		draft = null;
+	}
+	if ( draft && draft.submitted && Date.now() - draft.savedAt < MAX_AGE ) {
+		// Sidan har just sparats. Ta bort kopian om allt kom med, annars återställ.
+		if ( lostOnSave( draft ) ) {
+			delete draft.submitted;
+			restore( draft );
+			notice( draft.savedAt, true );
+			dirty = true;
+			write( draft );
+			lastSaved = JSON.stringify( [ draft.fields, draft.editors, draft.trips ] );
+		} else {
+			remove();
+		}
+	} else if ( draft && draft.savedAt && Date.now() - draft.savedAt < MAX_AGE && ( cfg.isNew || draft.savedAt > cfg.modified * 1000 ) ) {
 		restore( draft );
 		notice( draft.savedAt );
 		dirty = true; // Det återställda är fortfarande osparat.
@@ -549,16 +595,24 @@
 	var interval = setInterval( save, 3000 );
 	window.addEventListener( 'beforeunload', save );
 
-	// Vid vanlig sparning behövs kopian inte längre. Förhandsgranskningen (ny flik) räknas inte.
+	// Vid sparning behålls kopian, märkt som skickad. När sidan laddats om kontrolleras att
+	// allt kom med (se ovan). Förhandsgranskningen (ny flik) räknas inte.
 	form.addEventListener( 'submit', function ( event ) {
 		var by = event.submitter;
 		if ( by && '_blank' === by.getAttribute( 'formtarget' ) ) {
 			return;
 		}
+		save();
+		var data = read();
+		if ( data ) {
+			data.postId = cfg.postId; // En återställd kopia kan ha ett äldre id.
+			data.submitted = true;
+			data.savedAt = Date.now();
+			write( data );
+		}
 		window.removeEventListener( 'beforeunload', save );
 		clearInterval( interval );
 		clearTimeout( timer );
 		restoring = true; // Stoppa fler sparningar under tiden sidan skickas.
-		remove();
 	} );
 }() );

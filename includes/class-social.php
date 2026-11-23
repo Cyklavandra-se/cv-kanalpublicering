@@ -216,7 +216,7 @@ class CVKP_Social {
 			$changed      = true;
 		}
 		if ( $changed ) {
-			update_post_meta( $post_id, CVKP_Mailing::META_DATA, $d );
+			CVKP_Mailing::store_meta( $post_id, CVKP_Mailing::META_DATA, $d );
 		}
 		return $d;
 	}
@@ -226,7 +226,7 @@ class CVKP_Social {
 	/* ------------------------------------------------------------------ */
 
 	public static function get_state( $post_id, $channel ) {
-		$state = get_post_meta( $post_id, 'facebook' === $channel ? self::META_FB : self::META_IG, true );
+		$state = CVKP_Mailing::decode_meta( get_post_meta( $post_id, 'facebook' === $channel ? self::META_FB : self::META_IG, true ) );
 		return wp_parse_args(
 			is_array( $state ) ? $state : array(),
 			array(
@@ -240,7 +240,7 @@ class CVKP_Social {
 	}
 
 	private static function set_state( $post_id, $channel, array $state ) {
-		update_post_meta( $post_id, 'facebook' === $channel ? self::META_FB : self::META_IG, $state );
+		CVKP_Mailing::store_meta( $post_id, 'facebook' === $channel ? self::META_FB : self::META_IG, $state );
 	}
 
 	/** Länken i Facebook-inlägget: egen länk, annars det publicerade blogginlägget. */

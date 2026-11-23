@@ -72,3 +72,14 @@ add_filter( 'pre_http_request', function ( $pre, $args, $url ) {
 }, 10, 3 );
 add_filter( 'cvkp_meta_status_wait', '__return_zero' );
 add_filter( 'pre_wp_mail', function ( $r, $atts ) { file_put_contents( WP_CONTENT_DIR . '/cvkp-mock.log', 'MAIL ' . $atts['to'] . ' | ' . $atts['subject'] . "\n", FILE_APPEND ); return true; }, 10, 2 );
+
+// Testlägen för databasen. cvkp_mock_utf8 = som äldre sajter (utf8, inga emoji).
+// cvkp_mock_fail_meta = utskicket kan inte sparas alls.
+if ( get_option( 'cvkp_mock_utf8' ) ) {
+	add_filter( 'pre_get_col_charset', function () { return 'utf8'; } );
+	add_filter( 'pre_get_table_charset', function () { return 'utf8'; } );
+}
+if ( get_option( 'cvkp_mock_fail_meta' ) ) {
+	add_filter( 'update_post_metadata', function ( $check, $id, $key ) { return '_cvkp_data' === $key ? false : $check; }, 10, 3 );
+	add_filter( 'add_post_metadata', function ( $check, $id, $key ) { return '_cvkp_data' === $key ? false : $check; }, 10, 3 );
+}

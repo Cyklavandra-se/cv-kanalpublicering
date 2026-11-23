@@ -122,8 +122,67 @@ class CVKP_Mailing {
 	}
 
 	public static function get_data( $post_id ) {
-		$data = get_post_meta( $post_id, self::META_DATA, true );
+		$data = self::decode_meta( get_post_meta( $post_id, self::META_DATA, true ) );
 		return wp_parse_args( is_array( $data ) ? $data : array(), self::defaults() );
+	}
+
+	/* ------------------------------------------------------------------ */
+	/* Emoji och äldre databaser                                            */
+	/* ------------------------------------------------------------------ */
+
+	/**
+	 * Gör om tecken utanför grundplanet (emoji som 🚲 👋) till &#x…; före sparning.
+	 *
+	 * Äldre databaser med teckenkodningen utf8 (3 byte) kan inte lagra dem, och då
+	 * vägrar WordPress spara HELA värdet – utan felmeddelande. Det tömde utskicket
+	 * på cyklavandra.se i 0.5.3 när Claude skrev emoji i ämnesraden.
+	 */
+	public static function encode_meta( $value ) {
+		if ( is_array( $value ) ) {
+			return array_map( array( __CLASS__, 'encode_meta' ), $value );
+		}
+		if ( ! is_string( $value ) || ! preg_match( '/[\x{10000}-\x{10FFFF}]/u', $value ) ) {
+			return $value;
+		}
+		return preg_replace_callback(
+			'/[\x{10000}-\x{10FFFF}]/u',
+			static function ( $m ) {
+				// Fyrbytestecken i UTF-8: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx.
+				$b = array_values( unpack( 'C4', $m[0] ) );
+				$c = ( ( $b[0] & 0x07 ) << 18 ) | ( ( $b[1] & 0x3F ) << 12 ) | ( ( $b[2] & 0x3F ) << 6 ) | ( $b[3] & 0x3F );
+				return '&#x' . dechex( $c ) . ';';
+			},
+			$value
+		);
+	}
+
+	/** Motsatsen till encode_meta(): &#x1f6b2; blir 🚲 igen. */
+	public static function decode_meta( $value ) {
+		if ( is_array( $value ) ) {
+			return array_map( array( __CLASS__, 'decode_meta' ), $value );
+		}
+		if ( ! is_string( $value ) || false === strpos( $value, '&#x' ) ) {
+			return $value;
+		}
+		return preg_replace_callback(
+			'/&#x(1[0-9a-f]{4}|10[0-9a-f]{4}|[2-9a-f][0-9a-f]{4});/i',
+			static function ( $m ) {
+				return html_entity_decode( $m[0], ENT_QUOTES, 'UTF-8' );
+			},
+			$value
+		);
+	}
+
+	/**
+	 * Sparar ett metavärde med emoji kodade och kontrollerar att det verkligen sparades.
+	 *
+	 * @return bool
+	 */
+	public static function store_meta( $post_id, $key, $value ) {
+		$encoded = self::encode_meta( $value );
+		update_post_meta( $post_id, $key, $encoded );
+		wp_cache_delete( $post_id, 'post_meta' );
+		return get_post_meta( $post_id, $key, true ) == $encoded; // phpcs:ignore Universal.Operators.StrictComparisons -- jämför värden, inte typer.
 	}
 
 	public static function title_placeholder( $text, $post ) {
@@ -438,11 +497,17 @@ class CVKP_Mailing {
 
 		$raw  = isset( $_POST['cvkp'] ) && is_array( $_POST['cvkp'] ) ? wp_unslash( $_POST['cvkp'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- tvättas i from_request().
 		$data = self::from_request( $raw );
-		update_post_meta( $post_id, self::META_DATA, $data );
 
 		$notices = array();
+		if ( ! self::store_meta( $post_id, self::META_DATA, $data ) ) {
+			global $wpdb;
+			$notices[] = array(
+				'type'    => 'error',
+				'message' => 'Utskicket kunde inte sparas i databasen' . ( $wpdb->last_error ? ' (' . $wpdb->last_error . ')' : '' ) . '. Det ni skrev finns kvar i webbläsaren och har återställts i fälten – kopiera texterna för säkerhets skull och hör av er till Pär.',
+			);
+		}
 		if ( ! empty( $_POST['cvkp_schedule'] ) || ! empty( $_POST['cvkp_cancel'] ) ) {
-			$notices = self::run_social_action( $post_id, $data );
+			$notices = array_merge( $notices, self::run_social_action( $post_id, $data ) );
 		}
 		if ( $notices ) {
 			set_transient( 'cvkp_notices_' . get_current_user_id(), $notices, 120 );
@@ -450,7 +515,7 @@ class CVKP_Mailing {
 		if ( empty( $_POST['cvkp_run'] ) ) {
 			return;
 		}
-		$notices = self::run( $post_id, $data, html_entity_decode( get_the_title( $post_id ), ENT_QUOTES, 'UTF-8' ) );
+		$notices = array_merge( $notices, self::run( $post_id, $data, html_entity_decode( get_the_title( $post_id ), ENT_QUOTES, 'UTF-8' ) ) );
 		set_transient( 'cvkp_notices_' . get_current_user_id(), $notices, 120 );
 	}
 
