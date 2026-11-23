@@ -1,12 +1,15 @@
 <?php
 /**
  * Claude-rutan i ett utskick: klistra in länkar till resor (och gärna en egen ingress),
- * så fylls utskicket i.
+ * så fylls hela utskicket i.
  *
  * - Varje länk blir en resa i utskicket. Texten är resesidans första riktiga stycke
  *   (inte SEO-beskrivningen).
  * - Ingressen: den som skrivs i rutan används som den är. Lämnas den tom skriver
- *   Claude en kort ingress utifrån resorna.
+ *   Claude en.
+ * - Claude skriver också ämnesrad, förhandstext, rubriker, blogg-utdrag och texterna
+ *   till Facebook och Instagram. Webbläsaren fyller bara i fält som är tomma – det
+ *   som redan står skrivs aldrig över, och rabattkoden rörs aldrig.
  *
  * Nyckeln är densamma som AI-sök använder (CVAI_API_KEY eller AI-söks inställningar),
  * eller en egen CVKP_ANTHROPIC_API_KEY i wp-config.php. Den läggs aldrig i repot.
@@ -20,6 +23,23 @@ defined( 'ABSPATH' ) || exit;
 class CVKP_Claude {
 
 	const ENDPOINT = 'https://api.anthropic.com/v1/messages';
+
+	/**
+	 * Fälten som Claude skriver: fältnamn => beskrivning till Claude.
+	 * Samma namn som i utskicket (CVKP_Mailing::defaults()).
+	 */
+	const FIELDS = array(
+		'subject'       => 'Ämnesrad i inkorgen. Högst 60 tecken, lockande och konkret. Högst en emoji, gärna ingen.',
+		'preheader'     => 'Förhandstext som syns efter ämnesraden i inkorgen. En mening, högst 100 tecken, som kompletterar ämnesraden utan att upprepa den.',
+		'eyebrow'       => 'Kort överrubrik ovanför rubriken i mejlet, 2–5 ord, till exempel "Nya självguidade resor". Skrivs med vanliga bokstäver (mallen gör versaler).',
+		'heading'       => 'Rubrik överst i mejlet och på blogginlägget. Högst 8 ord.',
+		'intro'         => 'Ingress under rubriken, före resorna. 2–4 meningar, högst 70 ord. Väck lust att läsa vidare men beskriv inte resorna en och en. Ingen hälsningsfras. Är ingressen redan given: returnera den oförändrad.',
+		'trips_heading' => 'Rubrik ovanför resorna i mejlet, högst 5 ord. Tom sträng om det bara är en resa.',
+		'trips_intro'   => 'En kort mening före resorna, eller tom sträng om den inte behövs.',
+		'blog_excerpt'  => 'Utdrag till blogginlägget, visas i bloggflödet och när inlägget delas. 1–2 meningar, högst 160 tecken.',
+		'fb_text'       => 'Text till Facebook-inlägget. Inlägget visar länken till blogginlägget med bild, så texten ska inte innehålla någon adress. 2–4 korta stycken: en inledning, resorna med en rad var (gärna med emoji 🚲 för cykling och 🥾 för vandring) och en uppmaning att läsa mer. Högst 2 hashtaggar, gärna inga.',
+		'ig_text'       => 'Bildtext till Instagram-karusellen med resornas bilder. Personlig: börja med en hälsning från avsändaren, skriv som en människa i teamet. Nämn resorna (en rad var, gärna med emoji). Avsluta med länkraden och sedan 3–5 hashtaggar på sista raden. Inga adresser – länkar går inte att klicka på Instagram. Högst 1 500 tecken.',
+	);
 
 	/** Kortaste stycke som räknas som resans text (rubriker och "ca 63 km" hoppas över). */
 	const MIN_PARAGRAPH = 80;
@@ -70,7 +90,7 @@ class CVKP_Claude {
 		<div id="cvkp-claude" class="postbox cvkp-claude">
 			<div class="postbox-header"><h2>Claude – fyll i utskicket</h2></div>
 			<div class="inside">
-				<p class="description">Klistra in länkar till resorna ni vill lyfta fram, en per rad. Varje resa läggs till under Resor med första stycket från resesidan som text. Skriv en ingress om ni vill – annars skriver Claude en kort ingress utifrån resorna.</p>
+				<p class="description">Klistra in länkar till resorna ni vill lyfta fram, en per rad. Varje resa läggs till under Resor med första stycket från resesidan som text. Claude skriver sedan ingress (om ni inte skriver en själva), ämnesrad, förhandstext, rubriker, blogg-utdrag och texterna till Facebook och Instagram. <strong>Bara tomma fält fylls i</strong> – det som redan står ändras inte, och rabattkoden skriver ni själva. Fyll gärna i rabattkod och vem som hälsar på Instagram först, så kommer de med i texterna.</p>
 				<div class="cvkp-cols">
 					<p class="cvkp-field">
 						<label for="cvkp-claude-intro"><strong>Ingress (valfri)</strong></label>
@@ -87,7 +107,7 @@ class CVKP_Claude {
 					<span class="cvkp-claude-status" role="status"></span>
 				</p>
 				<?php if ( ! $has_key ) : ?>
-					<p class="description cvkp-warn">Ingen nyckel till Claude hittades. Resorna och en egen ingress fungerar ändå, men Claude kan inte skriva ingressen. Se Kanalpublicering → Inställningar.</p>
+					<p class="description cvkp-warn">Ingen nyckel till Claude hittades. Resorna och en egen ingress fungerar ändå, men Claude kan inte skriva texterna. Se Kanalpublicering → Inställningar.</p>
 				<?php endif; ?>
 			</div>
 		</div>
@@ -103,10 +123,14 @@ class CVKP_Claude {
 		if ( ! current_user_can( CVKP_Settings::CAPABILITY ) ) {
 			wp_send_json_error( 'Behörighet saknas.', 403 );
 		}
-		$intro = isset( $_POST['intro'] ) ? sanitize_textarea_field( wp_unslash( $_POST['intro'] ) ) : '';
-		$links = isset( $_POST['links'] ) ? sanitize_textarea_field( wp_unslash( $_POST['links'] ) ) : '';
+		$intro   = isset( $_POST['intro'] ) ? sanitize_textarea_field( wp_unslash( $_POST['intro'] ) ) : '';
+		$links   = isset( $_POST['links'] ) ? sanitize_textarea_field( wp_unslash( $_POST['links'] ) ) : '';
+		$context = array();
+		foreach ( array( 'heading', 'subject', 'code', 'code_note', 'ig_signer' ) as $key ) {
+			$context[ $key ] = isset( $_POST['context'][ $key ] ) ? sanitize_text_field( wp_unslash( $_POST['context'][ $key ] ) ) : '';
+		}
 
-		$result = self::fill( $intro, $links );
+		$result = self::fill( $intro, $links, $context );
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( $result->get_error_message() );
 		}
@@ -127,6 +151,7 @@ class CVKP_Claude {
 		wp_send_json_success(
 			array(
 				'intro'    => $result['intro'],
+				'texts'    => $result['texts'],
 				'rows'     => $rows,
 				'warnings' => $result['warnings'],
 				'by'       => $result['by'],
@@ -135,9 +160,12 @@ class CVKP_Claude {
 	}
 
 	/**
-	 * @return array|WP_Error array( 'intro', 'trips' => [ id, title, text ], 'warnings', 'by' )
+	 * @param string $intro   Egen ingress (tom = Claude skriver).
+	 * @param string $links   Länkar, en per rad.
+	 * @param array  $context Det som redan står i utskicket: heading, subject, code, code_note, ig_signer.
+	 * @return array|WP_Error array( 'intro', 'texts' => fält => text, 'trips' => [ id, title, text ], 'warnings', 'by' )
 	 */
-	public static function fill( $intro, $links ) {
+	public static function fill( $intro, $links, array $context = array() ) {
 		$urls = array();
 		foreach ( preg_split( '/\s+/', (string) $links ) as $candidate ) {
 			$candidate = trim( $candidate, " \t\n\r<>\"'" );
@@ -175,21 +203,23 @@ class CVKP_Claude {
 			return new WP_Error( 'cvkp_claude_none', 'Ingen av länkarna ledde till en sida på sajten. ' . implode( '. ', $warnings ) . '.' );
 		}
 
-		$by = 'egen';
-		if ( '' === trim( $intro ) ) {
-			$written = self::write_intro( $trips );
-			if ( is_wp_error( $written ) ) {
-				$warnings[] = 'Claude kunde inte skriva ingressen: ' . $written->get_error_message();
-				$intro      = '';
-				$by         = 'ingen';
-			} else {
-				$intro = $written;
-				$by    = 'claude';
+		$intro = trim( $intro );
+		$texts = self::write_texts( $trips, $intro, $context );
+		if ( is_wp_error( $texts ) ) {
+			$warnings[] = 'Claude kunde inte skriva texterna (' . $texts->get_error_message() . '). Resorna' . ( '' !== $intro ? ' och er ingress' : '' ) . ' är ifyllda, resten får ni skriva själva';
+			$texts      = array();
+			$by         = '' !== $intro ? 'egen' : 'ingen';
+		} else {
+			$by = '' !== $intro ? 'egen+claude' : 'claude';
+			if ( '' === $intro && isset( $texts['intro'] ) ) {
+				$intro = $texts['intro'];
 			}
+			unset( $texts['intro'] ); // Ingressen skickas separat (egen ingress vinner alltid).
 		}
 
 		return array(
 			'intro'    => $intro,
+			'texts'    => $texts,
 			'trips'    => $trips,
 			'warnings' => $warnings,
 			'by'       => $by,
@@ -245,36 +275,96 @@ class CVKP_Claude {
 	/* Claude                                                               */
 	/* ------------------------------------------------------------------ */
 
-	/** @return string|WP_Error Ingressen. */
-	public static function write_intro( array $trips ) {
+	/**
+	 * Ber Claude skriva utskickets texter i ett anrop, som JSON enligt FIELDS.
+	 *
+	 * @return array|WP_Error fält => text (bara fält i FIELDS).
+	 */
+	public static function write_texts( array $trips, $intro, array $context ) {
 		$key = self::api_key();
 		if ( '' === $key ) {
-			return new WP_Error( 'cvkp_claude_key', 'ingen nyckel (se Kanalpublicering → Inställningar)' );
+			return new WP_Error( 'cvkp_claude_key', 'ingen nyckel, se Kanalpublicering → Inställningar' );
 		}
+		$context = wp_parse_args(
+			$context,
+			array(
+				'heading'   => '',
+				'subject'   => '',
+				'code'      => '',
+				'code_note' => '',
+				'ig_signer' => '',
+			)
+		);
 
 		$list = array();
 		foreach ( $trips as $trip ) {
 			$data   = CVKP_Trip_Data::get( $trip['id'] );
-			$list[] = '<resa>' . "\nNamn: " . $trip['title'] . ( $data && '' !== $data['label'] ? "\nFakta: " . $data['label'] : '' ) . "\nFrån resesidan: " . $trip['text'] . "\n</resa>";
+			$list[] = "<resa>\nNamn: " . $trip['title']
+				. ( $data && '' !== $data['label'] ? "\nFakta: " . $data['label'] . ( $data['level'] ? ', nivå ' . $data['level'] . ' av 4' : '' ) : '' )
+				. "\nFrån resesidan: " . ( '' !== $trip['text'] ? $trip['text'] : '(inget stycke hittades)' )
+				. "\n</resa>";
 		}
 
-		$system = 'Du skriver ingressen till Cykla & Vandras nyhetsbrev. Cykla & Vandra är en svensk researrangör med cykel- och vandringsresor i Europa, många självguidade. '
-			. 'Ingressen står överst i mejlet under rubriken, före resorna, och samma text används i blogginlägget. '
-			. "Skriv på svenska och tilltala läsarna med ni. Tonen är varm, personlig och konkret, som från ett litet team som själva har rest. "
-			. 'Två till fyra meningar, högst 70 ord. Väck lust att läsa vidare om resorna, men beskriv dem inte en och en – det görs längre ner. '
-			. 'Ingen rubrik, inga länkar, inga hashtaggar, inga emoji och ingen hälsningsfras. Hitta inte på priser, datum, rabatter eller fakta som inte står i underlaget. '
-			. 'Svara bara med ingressens text.';
+		$facts = array();
+		if ( '' !== $intro ) {
+			$facts[] = "Ingress som redaktören har skrivit (använd den, returnera den oförändrad som intro):\n" . $intro;
+		}
+		if ( '' !== $context['heading'] ) {
+			$facts[] = 'Rubriken är redan bestämd: ' . $context['heading'];
+		}
+		if ( '' !== $context['subject'] ) {
+			$facts[] = 'Ämnesraden är redan bestämd: ' . $context['subject'];
+		}
+		if ( '' !== $context['code'] ) {
+			$facts[] = 'Rabattkod: ' . $context['code'] . ( '' !== $context['code_note'] ? ' (' . $context['code_note'] . ')' : '' ) . '. Nämn den gärna i ämnesrad, förhandstext, Facebook och Instagram.';
+		} else {
+			$facts[] = 'Det finns ingen rabattkod – nämn inga rabatter eller erbjudanden.';
+		}
+		$signer   = '' !== $context['ig_signer'] ? $context['ig_signer'] : '';
+		$facts[]  = '' !== $signer
+			? 'Instagram-texten skrivs av ' . $signer . ' i teamet. Börja med en hälsning från ' . $signer . ' och avsluta med "/' . $signer . '" före hashtaggarna.'
+			: 'Instagram-texten skrivs från hela teamet (' . implode( ', ', CVKP_Settings::team() ) . '). Börja med en hälsning från oss på Cykla & Vandra.';
+		$facts[]  = 'Länkraden på Instagram ska vara exakt: ' . CVKP_Settings::get( 'ig_link_text' );
+		$fixed    = CVKP_Social::hashtags_in( (string) CVKP_Settings::get( 'ig_hashtags' ) );
+		if ( $fixed ) {
+			$facts[] = 'Dessa hashtaggar ska alltid med på Instagram: ' . implode( ' ', $fixed ) . '. Totalt 3–5 hashtaggar.';
+		}
+
+		$system = 'Du skriver texterna till ett utskick från Cykla & Vandra, en svensk researrangör med cykel- och vandringsresor i Europa, många självguidade. '
+			. 'Samma utskick blir nyhetsbrev, blogginlägg, Facebook-inlägg och Instagram-karusell. Resornas egna texter från resesidorna läggs in separat i nyhetsbrevet, så du skriver bara de övriga texterna. '
+			. 'Skriv på svenska och tilltala läsarna med ni. Tonen är varm, personlig och konkret, som från ett litet team som själva har cyklat och vandrat. '
+			. 'Hitta inte på priser, datum, rabatter, avgångar eller fakta som inte står i underlaget. Inga adresser eller länkar i texterna. '
+			. 'Följ beskrivningen för varje fält i JSON-schemat.';
+
+		$properties = array();
+		foreach ( self::FIELDS as $field => $description ) {
+			$properties[ $field ] = array(
+				'type'        => 'string',
+				'description' => $description,
+			);
+		}
 
 		$body = array(
 			'model'         => self::model(),
 			'max_tokens'    => 16000,
-			// Kort text: låg ansträngning räcker och ger snabbt svar.
-			'output_config' => array( 'effort' => 'low' ),
+			'output_config' => array(
+				// Flera korta texter: medel ansträngning ger bra språk utan lång väntan.
+				'effort' => 'medium',
+				'format' => array(
+					'type'   => 'json_schema',
+					'schema' => array(
+						'type'                 => 'object',
+						'properties'           => $properties,
+						'required'             => array_keys( self::FIELDS ),
+						'additionalProperties' => false,
+					),
+				),
+			),
 			'system'        => $system,
 			'messages'      => array(
 				array(
 					'role'    => 'user',
-					'content' => "Resorna i utskicket (underlag från resesidorna):\n\n" . implode( "\n\n", $list ) . "\n\nSkriv ingressen.",
+					'content' => "Resorna i utskicket (underlag från resesidorna):\n\n" . implode( "\n\n", $list ) . "\n\n" . implode( "\n\n", $facts ) . "\n\nSkriv texterna.",
 				),
 			),
 			// Om säkerhetsfiltret skulle neka svarar en annan modell i stället för att inget händer.
@@ -284,7 +374,7 @@ class CVKP_Claude {
 		$response = wp_remote_post(
 			self::ENDPOINT,
 			array(
-				'timeout' => 90,
+				'timeout' => 120,
 				'headers' => array(
 					'x-api-key'         => $key,
 					'anthropic-version' => '2023-06-01',
@@ -308,8 +398,12 @@ class CVKP_Claude {
 			}
 			return new WP_Error( 'cvkp_claude_' . $code, $message );
 		}
-		if ( isset( $json['stop_reason'] ) && 'refusal' === $json['stop_reason'] ) {
-			return new WP_Error( 'cvkp_claude_refusal', 'Claude avböjde att skriva texten. Skriv ingressen själv.' );
+		$stop = isset( $json['stop_reason'] ) ? $json['stop_reason'] : '';
+		if ( 'refusal' === $stop ) {
+			return new WP_Error( 'cvkp_claude_refusal', 'Claude avböjde' );
+		}
+		if ( 'max_tokens' === $stop ) {
+			return new WP_Error( 'cvkp_claude_long', 'svaret blev för långt' );
 		}
 
 		$text = '';
@@ -318,7 +412,18 @@ class CVKP_Claude {
 				$text .= $block['text'];
 			}
 		}
-		$text = trim( $text );
-		return '' === $text ? new WP_Error( 'cvkp_claude_empty', 'tomt svar' ) : $text;
+		$data = json_decode( trim( $text ), true );
+		if ( ! is_array( $data ) ) {
+			return new WP_Error( 'cvkp_claude_json', 'oväntat svar' );
+		}
+
+		$out = array();
+		foreach ( array_keys( self::FIELDS ) as $field ) {
+			$value = isset( $data[ $field ] ) && is_string( $data[ $field ] ) ? trim( $data[ $field ] ) : '';
+			if ( '' !== $value ) {
+				$out[ $field ] = sanitize_textarea_field( $value );
+			}
+		}
+		return $out;
 	}
 }

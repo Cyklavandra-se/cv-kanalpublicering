@@ -20,15 +20,16 @@ echo "== Första stycket (Avada)\n" . CVKP_Claude::first_paragraph( $avada->ID )
 echo "== Nyckelkälla: " . CVKP_Claude::key_source() . "\n";
 
 update_option( 'cvkp_mock_claude', '' );
-$r = CVKP_Claude::fill( '', $links );
-echo "== Utan ingress\nav: {$r['by']}\ningress: {$r['intro']}\n";
+$r = CVKP_Claude::fill( '', $links, array( 'ig_signer' => 'Sarah', 'code' => 'TIDIG26' ) );
+echo "== Utan ingress\nav: {$r['by']}\ningress: {$r['intro']}\ntexter: " . implode( ', ', array_keys( $r['texts'] ) ) . "\nämnesrad: {$r['texts']['subject']}\n";
 foreach ( $r['trips'] as $t ) { echo "resa {$t['id']} {$t['title']}: " . mb_substr( $t['text'], 0, 60 ) . "\n"; }
 echo 'varningar: ' . implode( ' | ', $r['warnings'] ) . "\n";
 $req = json_decode( file_get_contents( WP_CONTENT_DIR . '/cvkp-mock-claude.json' ), true );
-echo "anrop: model={$req['model']} effort={$req['output_config']['effort']} fallbacks={$req['fallbacks']} thinking=" . ( isset( $req['thinking'] ) ? 'satt' : 'utelämnad' ) . "\n";
+echo "anrop: model={$req['model']} effort={$req['output_config']['effort']} format={$req['output_config']['format']['type']} fält=" . count( $req['output_config']['format']['schema']['required'] ) . " fallbacks={$req['fallbacks']} thinking=" . ( isset( $req['thinking'] ) ? 'satt' : 'utelämnad' ) . "\n";
+echo 'underlag nämner: ' . implode( ', ', array_filter( array( false !== strpos( $req['messages'][0]['content'], 'TIDIG26' ) ? 'rabattkod' : '', false !== strpos( $req['messages'][0]['content'], 'Sarah' ) ? 'Sarah' : '', false !== strpos( $req['messages'][0]['content'], 'Resan börjar i Metz' ) ? 'första stycket' : '' ) ) ) . "\n";
 
 $r = CVKP_Claude::fill( "Vår egen ingress.\n\nAndra stycket.", get_permalink( $avada ) );
-echo "== Egen ingress\nav: {$r['by']} | {$r['intro']}\n";
+echo "== Egen ingress\nav: {$r['by']} | {$r['intro']} | texter: " . count( $r['texts'] ) . " (intro ingår inte: " . ( isset( $r['texts']['intro'] ) ? 'FEL' : 'ok' ) . ")\n";
 
 update_option( 'cvkp_mock_claude', 'refusal' );
 $r = CVKP_Claude::fill( '', get_permalink( $avada ) );

@@ -50,3 +50,5 @@
 .cvkp-claude .postbox-header h2 { padding: 8px 12px; margin: 0; font-size: 14px; }
 .cvkp-claude .spinner { float: none; }
 .cvkp-claude-status { margin-left: 6px; }
+.cvkp-filled { background: #edfaef !important; border-color: #68de7c !important; }
+.wp-editor-wrap .cvkp-filled { box-shadow: 0 0 0 2px #68de7c; }

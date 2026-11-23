@@ -114,7 +114,7 @@
 	} );
 }() );
 
-/* Claude-rutan: hämtar resorna från länkarna och fyller i ingress och resor. */
+/* Claude-rutan: hämtar resorna från länkarna och fyller i alla tomma fält. */
 ( function () {
 	'use strict';
 
@@ -125,6 +125,21 @@
 	var box = document.getElementById( 'cvkp-claude' );
 	var spinner = box.querySelector( '.spinner' );
 	var status = box.querySelector( '.cvkp-claude-status' );
+
+	/** Fälten som kan fyllas i: fältnamn => element-id (editorer har id cvkp_<namn>). */
+	var FIELDS = {
+		subject: 'cvkp-subject',
+		preheader: 'cvkp-preheader',
+		eyebrow: 'cvkp-eyebrow',
+		heading: 'cvkp-heading',
+		trips_heading: 'cvkp-trips_heading',
+		blog_excerpt: 'cvkp-blog_excerpt',
+		fb_text: 'cvkp-fb_text',
+		ig_text: 'cvkp-ig_text',
+		intro: 'cvkp_intro',
+		trips_intro: 'cvkp_trips_intro'
+	};
+	var EDITORS = [ 'intro', 'trips_intro' ];
 
 	function escapeHtml( text ) {
 		var div = document.createElement( 'div' );
@@ -139,25 +154,52 @@
 		} ).join( '' );
 	}
 
-	function getIntro() {
-		var editor = window.tinymce && window.tinymce.get( 'cvkp_intro' );
-		if ( editor && ! editor.isHidden() ) {
-			return editor.getContent( { format: 'text' } ).trim();
-		}
-		var area = document.getElementById( 'cvkp_intro' );
-		return area ? area.value.trim() : '';
+	function editor( id ) {
+		var ed = window.tinymce && window.tinymce.get( id );
+		return ed && ! ed.isHidden() ? ed : null;
 	}
 
-	function setIntro( html ) {
-		var editor = window.tinymce && window.tinymce.get( 'cvkp_intro' );
-		if ( editor && ! editor.isHidden() ) {
-			editor.setContent( html );
+	function getValue( field ) {
+		var id = FIELDS[ field ];
+		var ed = editor( id );
+		if ( ed ) {
+			return ed.getContent( { format: 'text' } ).trim();
 		}
-		var area = document.getElementById( 'cvkp_intro' );
-		if ( area ) {
-			area.value = html;
+		var el = document.getElementById( id );
+		return el ? el.value.trim() : '';
+	}
+
+	function setValue( field, text ) {
+		var id = FIELDS[ field ];
+		var el = document.getElementById( id );
+		if ( -1 !== EDITORS.indexOf( field ) ) {
+			var html = toParagraphs( text );
+			var ed = editor( id );
+			if ( ed ) {
+				ed.setContent( html );
+				var frame = ed.getContainer();
+				if ( frame ) {
+					frame.classList.add( 'cvkp-filled' );
+				}
+			}
+			if ( el ) {
+				el.value = html;
+			}
+			return;
+		}
+		if ( el ) {
+			el.value = text;
+			el.classList.add( 'cvkp-filled' );
+			el.dispatchEvent( new Event( 'input' ) ); // Uppdaterar räknaren för Instagram.
 		}
 	}
+
+	/** Markeringen försvinner när man ändrar i fältet. */
+	document.addEventListener( 'input', function ( event ) {
+		if ( event.isTrusted && event.target.classList ) {
+			event.target.classList.remove( 'cvkp-filled' );
+		}
+	} );
 
 	button.addEventListener( 'click', function () {
 		var links = document.getElementById( 'cvkp-claude-links' ).value.trim();
@@ -169,7 +211,7 @@
 
 		button.disabled = true;
 		spinner.classList.add( 'is-active' );
-		status.textContent = intro.trim() ? 'Hämtar resorna …' : 'Hämtar resorna och ber Claude skriva en ingress …';
+		status.textContent = 'Hämtar resorna och ber Claude skriva texterna … (brukar ta 10–30 sekunder)';
 		status.classList.remove( 'cvkp-warn' );
 
 		var body = new FormData();
@@ -177,6 +219,13 @@
 		body.append( 'nonce', window.cvkpAdmin.nonce );
 		body.append( 'intro', intro );
 		body.append( 'links', links );
+		[ 'heading', 'subject' ].forEach( function ( field ) {
+			body.append( 'context[' + field + ']', getValue( field ) );
+		} );
+		[ 'code', 'code_note', 'ig_signer' ].forEach( function ( field ) {
+			var el = document.getElementById( 'cvkp-' + field );
+			body.append( 'context[' + field + ']', el ? el.value : '' );
+		} );
 
 		fetch( window.cvkpAdmin.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: body } )
 			.then( function ( response ) {
@@ -187,12 +236,34 @@
 					throw new Error( result.data || 'Okänt fel' );
 				}
 				var data = result.data;
+				var filled = 0;
+				var kept = 0;
 
+				// Ingressen: en egen ingress i rutan ersätter (efter fråga) det som står i Inledning.
 				if ( data.intro ) {
-					if ( ! getIntro() || window.confirm( 'Ersätta den inledning som redan står i utskicket?' ) ) {
-						setIntro( toParagraphs( data.intro ) );
+					if ( ! getValue( 'intro' ) ) {
+						setValue( 'intro', data.intro );
+						filled++;
+					} else if ( 'egen' === data.by.split( '+' )[ 0 ] && window.confirm( 'Ersätta den inledning som redan står i utskicket med ingressen från rutan?' ) ) {
+						setValue( 'intro', data.intro );
+						filled++;
+					} else {
+						kept++;
 					}
 				}
+
+				// Övriga texter: bara tomma fält.
+				Object.keys( data.texts || {} ).forEach( function ( field ) {
+					if ( ! FIELDS[ field ] ) {
+						return;
+					}
+					if ( getValue( field ) ) {
+						kept++;
+						return;
+					}
+					setValue( field, data.texts[ field ] );
+					filled++;
+				} );
 
 				var list = document.getElementById( 'cvkp-trip-list' );
 				var wrapper = document.createElement( 'div' );
@@ -203,13 +274,12 @@
 					count++;
 				}
 
-				var done = count + ( 1 === count ? ' resa tillagd' : ' resor tillagda' ) + ' under Resor';
-				if ( 'claude' === data.by ) {
-					done += ', ingressen skriven av Claude – läs igenom den';
-				} else if ( 'egen' === data.by ) {
-					done += ', er ingress ligger i Inledning';
+				var done = count + ( 1 === count ? ' resa tillagd' : ' resor tillagda' ) + ', ' + filled + ' fält ifyllda (markerade med grönt)';
+				if ( kept ) {
+					done += ', ' + kept + ' fält hade redan text och ändrades inte';
 				}
-				status.textContent = done + '.' + ( data.warnings.length ? ' Obs: ' + data.warnings.join( '. ' ) + '.' : '' );
+				done += '. Läs igenom allt och klicka Spara och skapa utkast.';
+				status.textContent = done + ( data.warnings.length ? ' Obs: ' + data.warnings.join( '. ' ) + '.' : '' );
 				status.classList.toggle( 'cvkp-warn', data.warnings.length > 0 );
 			} )
 			.catch( function ( error ) {

@@ -32,7 +32,7 @@ Kortversion:
 ## Använda
 
 1. **Cykla&Vandra → Kanalpublicering → Nytt utskick.** Ge det ett internt namn.
-   - **Snabbast:** klistra in länkar till resorna i rutan **Claude – fyll i utskicket** under namnet och klicka **Fyll i utskicket**. Resorna läggs till med första stycket från resesidan som text, och Claude skriver en kort ingress om ni inte skriver en själva. Läs igenom och justera sedan som vanligt.
+   - **Snabbast:** fyll gärna i rabattkod och vem som hälsar på Instagram, klistra in länkar till resorna i rutan **Claude – fyll i utskicket** under namnet och klicka **Fyll i utskicket**. Resorna läggs till med första stycket från resesidan som text, och Claude skriver ingress (om ni inte skriver en själva), ämnesrad, förhandstext, rubriker, blogg-utdrag och texterna till Facebook och Instagram. Bara tomma fält fylls i, och de markeras med grönt. Läs igenom, justera och gå vidare som vanligt.
 2. Fyll i ämnesrad, förhandstext, rubrik, inledning och eventuell rabattkod.
 3. Under **Resor**: välj resa och klicka **Lägg till resa**. Bild, länk, typ och antal dagar hämtas från resesidan, och resans beskrivning läggs in som starttext. Skriv om texten, ändra rubrik eller etikett vid behov och sortera med pilarna. "Läs mer" läggs till automatiskt. Välj också bild för Instagram, eller ta bort resan från Instagram.
 4. **Förhandsgranska nyhetsbrevet** visar mejlet direkt, även osparade ändringar.

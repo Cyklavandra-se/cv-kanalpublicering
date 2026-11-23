@@ -18,7 +18,18 @@ add_filter( 'pre_http_request', function ( $pre, $args, $url ) {
 		}
 		$out = 'refusal' === $mode
 			? array( 'stop_reason' => 'refusal', 'content' => array() )
-			: array( 'stop_reason' => 'end_turn', 'content' => array( array( 'type' => 'thinking', 'thinking' => '' ), array( 'type' => 'text', 'text' => "Längtar ni också ut? Här är några av våra favoriter för nästa säsong.\n\nFloder, vinbyar och ert eget tempo." ) ) );
+			: array( 'stop_reason' => 'end_turn', 'content' => array( array( 'type' => 'thinking', 'thinking' => '' ), array( 'type' => 'text', 'text' => wp_json_encode( array(
+				'subject'       => 'Floder och vinbyar i ert eget tempo 🚲',
+				'preheader'     => 'Två resor vi längtar tillbaka till.',
+				'eyebrow'       => 'Nya självguidade resor',
+				'heading'       => 'Sommarens floder',
+				'intro'         => "Längtar ni också ut? Här är några av våra favoriter för nästa säsong.\n\nFloder, vinbyar och ert eget tempo.",
+				'trips_heading' => 'Resorna',
+				'trips_intro'   => '',
+				'blog_excerpt'  => 'Två självguidade resor längs floder och genom vinbyar.',
+				'fb_text'       => "Sommarens floder 🚲\n\n🚲 Mosel\n🥾 Madeira\n\nLäs mer i bloggen.",
+				'ig_text'       => "Hej från Sarah! 👋\n\n🚲 Mosel\n🥾 Madeira\n\nLäs mer via länken i vår bio → Aktuellt\n\n/Sarah\n\n#cyklavandra #cykelsemester #vandringsresa",
+			), JSON_UNESCAPED_UNICODE ) ) ) );
 		return array( 'headers' => array(), 'body' => wp_json_encode( $out ), 'response' => array( 'code' => 200, 'message' => '' ), 'cookies' => array(), 'filename' => null );
 	}
 	if ( 'api.wordpress.org' === $host ) {
