@@ -11,7 +11,7 @@ Användare: Pär (admin) och Sarah (Redaktör). Verktyget kräver `edit_others_p
 ## Status (november 2026)
 
 - **Fas 1** (grenen `fas-1`, PR #1): utskick, Resefakta, nyhetsbrevsmall, Mailchimp-utkast, blogginlägg och /aktuellt. Testat lokalt med simulerade API:er, **inte mot riktiga Mailchimp eller live-sajten än**. Checklistan finns i docs/installation.md.
-- **Fas 2** (version 0.2.0; 0.3.0 lägger till menyn Cykla&Vandra och uppdateringar via GitHub; 0.4.0 slår ihop Utskick och inställningarna under Kanalpublicering med flikar). PR #2 är sammanslagen och v0.3.0 släppt 2026-11-23: Facebook (länkinlägg som schemaläggs hos Meta) och Instagram (karusell som publiceras via WP-Cron vid godkänd tid). Testat lokalt med mockad Graph API. **Meta-appen är inte skapad än**, och det är inte kontrollerat att @cyklavandra.se är ett professionellt konto kopplat till FB-sidan (docs/meta-installation.md).
+- **Fas 2** (version 0.2.0; 0.3.0 lägger till menyn Cykla&Vandra och uppdateringar via GitHub; 0.4.0 slår ihop Utskick och inställningarna under Kanalpublicering med flikar). PR #2 är sammanslagen och v0.3.0 släppt 2026-11-23. Samma dag släpptes v0.4.0 (PR #3) och v0.4.1, där `.claude` inte längre följer med i zip-filen: Facebook (länkinlägg som schemaläggs hos Meta) och Instagram (karusell som publiceras via WP-Cron vid godkänd tid). Testat lokalt med mockad Graph API. **Meta-appen är inte skapad än**, och det är inte kontrollerat att @cyklavandra.se är ett professionellt konto kopplat till FB-sidan (docs/meta-installation.md).
 - Instagram har varit inaktivt sedan juli 2026. Bion har cyklavandra.se och linktr.ee/cyklavandra.se. Där ska en fast länk **Aktuellt → https://cyklavandra.se/aktuellt** in (görs för hand).
 
 ## Sajten
@@ -55,4 +55,5 @@ Ingen riktig Mailchimp eller Meta här. Från molnmiljön är `*.api.mailchimp.c
 ## Arbetssätt
 
 - Fråga innan något skickas eller publiceras på riktigt. Skapa inte PR utan att bli ombedd.
+- `.claude/settings.json`, som Pär själv lagt in 2026-11-23, tillåter `mcp__github__merge_pull_request`. Sessionens Auto-läge stoppar annars sammanslagningar. **Slå bara ihop när Pär ber om det.** Kontrollera först att CI är grönt och att det inte finns några konflikter. Kontrollera efteråt att releasen fick zip-filen. Ändra inte behörighetsfilen själv.
 - Ändra aldrig ett publicerat blogginlägg från tillägget.
