@@ -102,7 +102,9 @@ class CVKP_Claude {
 					</p>
 				</div>
 				<p>
-					<button type="button" class="button button-primary" id="cvkp-claude-run">Fyll i utskicket</button>
+					<?php $named = '' !== trim( (string) $post->post_title ); ?>
+					<button type="button" class="button button-primary" id="cvkp-claude-run" <?php disabled( ! $named ); ?>>Fyll i utskicket</button>
+					<span class="description cvkp-claude-needs-title"<?php echo $named ? ' hidden' : ''; ?>>Ge utskicket ett namn först (fältet ovanför).</span>
 					<span class="spinner"></span>
 					<span class="cvkp-claude-status" role="status"></span>
 				</p>
