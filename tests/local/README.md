@@ -23,6 +23,7 @@ och `define( 'DISABLE_WP_CRON', true );`, installera med `wp_install()` och kör
 ```bash
 W=$W php tests/local/setup.php   # aktiverar tillägget, skapar tre resor med bilder och användaren sarah (Redaktör)
 W=$W php tests/local/flow.php    # hela flödet: utkast, schemaläggning, avbryt, cron, felfall
+W=$W php tests/local/blog.php    # blogginlägget: bilder i 1200 px, utvald bild dold överst (Avada)
 W=$W php tests/local/emoji.php   # emoji på en äldre databas (utf8) och felmeddelande när sparningen misslyckas
 W=$W php tests/local/claude.php  # Claude-rutan: länkar → resor, ingress, felfall (lägg define( 'CVAI_API_KEY', 'fake' ); i wp-config.php)
 php -S localhost:8899 -t $W      # för att klicka runt (sarah/sarah)

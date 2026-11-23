@@ -44,7 +44,7 @@ class CVKP_Blog_Renderer {
 			$trip  = CVKP_Email_Renderer::trip_row( $row, $data );
 			$out[] = '<h3>' . esc_html( $trip['heading'] ) . '</h3>';
 			if ( $data['image_id'] ) {
-				$out[] = '<p><a href="' . esc_url( $data['url'] ) . '">' . wp_get_attachment_image( $data['image_id'], 'large', false, array( 'alt' => $data['title'] ) ) . '</a></p>';
+				$out[] = '<p><a href="' . esc_url( $data['url'] ) . '">' . wp_get_attachment_image( $data['image_id'], CVKP_Trip_Data::image_size( $data['image_id'] ), false, array( 'alt' => $data['title'] ) ) . '</a></p>';
 			}
 			$text  = wpautop( wp_kses_post( $trip['text'] ) );
 			$link  = ' <a href="' . esc_url( $data['url'] ) . '">Läs mer</a>.';
