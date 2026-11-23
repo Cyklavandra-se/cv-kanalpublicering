@@ -1,0 +1,64 @@
+name: Release
+
+# Skapar en release automatiskt när versionen i cv-kanalpublicering.php ändras.
+# Höj "Version:" och pusha till main, så skapas taggen vX.Y.Z och en release
+# med cv-kanalpublicering.zip. WordPress hittar den via "Sök efter uppdatering".
+# Finns redan en release för versionen görs ingenting (utom att en saknad
+# zip-fil läggs till). Går också att köra för hand under Actions.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Läs version
+        id: version
+        run: |
+          VERSION=$(grep -m1 -E '^\s*\*\s*Version:' cv-kanalpublicering.php | sed -E 's/.*Version:\s*//' | tr -d '[:space:]')
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Kunde inte läsa en giltig Version i cv-kanalpublicering.php (fick '$VERSION')."
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Finns releasen redan?
+        id: check
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          if gh release view "$TAG" --json assets --jq '.assets[].name' > assets.txt 2>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            if grep -qx 'cv-kanalpublicering.zip' assets.txt; then
+              echo "complete=true" >> "$GITHUB_OUTPUT"
+              echo "Release $TAG finns redan. Höj Version i cv-kanalpublicering.php för att släppa en ny."
+            fi
+          fi
+
+      - name: Bygg zip
+        if: steps.check.outputs.complete != 'true'
+        run: git archive --format=zip --prefix=cv-kanalpublicering/ -o cv-kanalpublicering.zip HEAD
+
+      - name: Skapa release
+        if: steps.check.outputs.exists != 'true'
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          gh release create "$TAG" cv-kanalpublicering.zip --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+
+      - name: Lägg till zip i befintlig release
+        if: steps.check.outputs.exists == 'true' && steps.check.outputs.complete != 'true'
+        run: gh release upload "${{ steps.version.outputs.tag }}" cv-kanalpublicering.zip --clobber
