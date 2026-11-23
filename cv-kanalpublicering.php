@@ -3,7 +3,7 @@
  * Plugin Name:       Cykla & Vandra – Kanalpublicering
  * Plugin URI:        https://github.com/Cyklavandra-se/cv-kanalpublicering
  * Description:       Skriv ett utskick en gång och skapa utkast för nyhetsbrev (Mailchimp), blogginlägg, Facebook och Instagram. Inget publiceras utan godkännande.
- * Version:           0.4.1
+ * Version:           0.5.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Cykla & Vandra
@@ -14,7 +14,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'CVKP_VERSION', '0.4.1' );
+define( 'CVKP_VERSION', '0.5.0' );
 define( 'CVKP_FILE', __FILE__ );
 define( 'CVKP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CVKP_URL', plugin_dir_url( __FILE__ ) );
@@ -35,6 +35,7 @@ require_once CVKP_DIR . 'includes/class-social.php';
 require_once CVKP_DIR . 'includes/class-mailing.php';
 require_once CVKP_DIR . 'includes/class-latest-redirect.php';
 require_once CVKP_DIR . 'includes/class-admin-ui.php';
+require_once CVKP_DIR . 'includes/class-claude.php';
 
 add_action(
 	'plugins_loaded',
@@ -45,6 +46,7 @@ add_action(
 		CVKP_Latest_Redirect::init();
 		CVKP_Social::init();
 		CVKP_Admin_Ui::init();
+		CVKP_Claude::init();
 	}
 );
 

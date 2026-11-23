@@ -8,6 +8,30 @@ add_filter( 'pre_http_request', function ( $pre, $args, $url ) {
 		$body = $v ? array( 'tag_name' => 'v' . $v, 'html_url' => 'https://github.com/cyklavandra-se/cv-kanalpublicering/releases/tag/v' . $v, 'body' => "## Nytt\n- **Test** av uppdatering", 'published_at' => '2026-11-23T10:00:00Z', 'assets' => array( array( 'name' => 'cv-kanalpublicering.zip', 'browser_download_url' => 'https://github.com/cyklavandra-se/cv-kanalpublicering/releases/download/v' . $v . '/cv-kanalpublicering.zip' ) ) ) : array( 'message' => 'Not Found' );
 		return array( 'headers' => array(), 'body' => wp_json_encode( $body ), 'response' => array( 'code' => $v ? 200 : 404, 'message' => '' ), 'cookies' => array(), 'filename' => null );
 	}
+	// Claude (Messages API). Optionen cvkp_mock_claude styr svaret: '' = text, 'refusal', '401'.
+	if ( 'api.anthropic.com' === $host ) {
+		file_put_contents( WP_CONTENT_DIR . '/cvkp-mock-claude.json', $args['body'] );
+		file_put_contents( WP_CONTENT_DIR . '/cvkp-mock.log', 'POST ' . $url . ' beta=' . ( isset( $args['headers']['anthropic-beta'] ) ? $args['headers']['anthropic-beta'] : '-' ) . ' key=' . ( empty( $args['headers']['x-api-key'] ) ? 'saknas' : 'finns' ) . "\n", FILE_APPEND );
+		$mode = get_option( 'cvkp_mock_claude', '' );
+		if ( '401' === $mode ) {
+			return array( 'headers' => array(), 'body' => wp_json_encode( array( 'type' => 'error', 'error' => array( 'type' => 'authentication_error', 'message' => 'invalid x-api-key' ) ) ), 'response' => array( 'code' => 401, 'message' => '' ), 'cookies' => array(), 'filename' => null );
+		}
+		$out = 'refusal' === $mode
+			? array( 'stop_reason' => 'refusal', 'content' => array() )
+			: array( 'stop_reason' => 'end_turn', 'content' => array( array( 'type' => 'thinking', 'thinking' => '' ), array( 'type' => 'text', 'text' => wp_json_encode( array(
+				'subject'       => 'Floder och vinbyar i ert eget tempo 🚲',
+				'preheader'     => 'Två resor vi längtar tillbaka till.',
+				'eyebrow'       => 'Nya självguidade resor',
+				'heading'       => 'Sommarens floder',
+				'intro'         => "Längtar ni också ut? Här är några av våra favoriter för nästa säsong.\n\nFloder, vinbyar och ert eget tempo.",
+				'trips_heading' => 'Resorna',
+				'trips_intro'   => '',
+				'blog_excerpt'  => 'Två självguidade resor längs floder och genom vinbyar.',
+				'fb_text'       => "Sommarens floder 🚲\n\n🚲 Mosel\n🥾 Madeira\n\nLäs mer i bloggen.",
+				'ig_text'       => "Hej från Sarah! 👋\n\n🚲 Mosel\n🥾 Madeira\n\nLäs mer via länken i vår bio → Aktuellt\n\n/Sarah\n\n#cyklavandra #cykelsemester #vandringsresa",
+			), JSON_UNESCAPED_UNICODE ) ) ) );
+		return array( 'headers' => array(), 'body' => wp_json_encode( $out ), 'response' => array( 'code' => 200, 'message' => '' ), 'cookies' => array(), 'filename' => null );
+	}
 	if ( 'api.wordpress.org' === $host ) {
 		return array( 'headers' => array(), 'body' => wp_json_encode( array( 'plugins' => array(), 'translations' => array(), 'no_update' => array() ) ), 'response' => array( 'code' => 200, 'message' => '' ), 'cookies' => array(), 'filename' => null );
 	}

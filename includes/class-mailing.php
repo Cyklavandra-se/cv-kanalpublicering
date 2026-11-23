@@ -218,7 +218,7 @@ class CVKP_Mailing {
 		echo '</select> <button type="button" class="button" id="cvkp-add-trip">Lägg till resa</button> <span class="spinner"></span></p>';
 	}
 
-	/** En rad i reselistan. $data null = mall för JavaScript. */
+	/** En rad i reselistan. $data null = mall för JavaScript. Används också av Claude-rutan. */
 	public static function trip_row_html( array $row, $data, $key ) {
 		$row  = wp_parse_args(
 			$row,
