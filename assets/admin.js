@@ -279,6 +279,7 @@
 					done += ', ' + kept + ' fält hade redan text och ändrades inte';
 				}
 				done += '. Läs igenom allt och klicka Spara och skapa utkast.';
+				document.dispatchEvent( new Event( 'cvkp:changed' ) ); // Sparas i webbläsaren direkt.
 				status.textContent = done + ( data.warnings.length ? ' Obs: ' + data.warnings.join( '. ' ) + '.' : '' );
 				status.classList.toggle( 'cvkp-warn', data.warnings.length > 0 );
 			} )
@@ -290,5 +291,274 @@
 				button.disabled = false;
 				spinner.classList.remove( 'is-active' );
 			} );
+	} );
+}() );
+
+/*
+ * Osparade ändringar sparas i webbläsaren (localStorage) medan man skriver, så att
+ * inget försvinner om sidan laddas om eller man råkar lämna den. När man kommer
+ * tillbaka återställs ändringarna automatiskt, med en ruta som säger det.
+ * Sparas utskicket på vanligt sätt tas kopian bort.
+ */
+( function () {
+	'use strict';
+
+	var cfg = window.cvkpAdmin;
+	var form = document.getElementById( 'post' );
+	if ( ! cfg || ! cfg.postId || ! form ) {
+		return;
+	}
+
+	var VERSION = 1;
+	var MAX_AGE = 14 * 24 * 3600 * 1000; // Äldre kopior än två veckor används inte.
+	// Ett nytt utskick får ett nytt id varje gång sidan öppnas, så det sparas under "nytt".
+	var key = 'cvkp-utskick-' + cfg.userId + '-' + ( cfg.isNew ? 'nytt' : cfg.postId );
+	var list = document.getElementById( 'cvkp-trip-list' );
+	var EXTRA_IDS = [ 'title', 'cvkp-claude-intro', 'cvkp-claude-links' ];
+	var lastSaved = '';
+	var restoring = false;
+	var dirty = false; // Kopian skapas först när något faktiskt har ändrats.
+
+	function storage() {
+		try {
+			return window.localStorage;
+		} catch ( e ) {
+			return null;
+		}
+	}
+
+	function read() {
+		var s = storage();
+		if ( ! s ) {
+			return null;
+		}
+		try {
+			var data = JSON.parse( s.getItem( key ) || 'null' );
+			return data && VERSION === data.v ? data : null;
+		} catch ( e ) {
+			return null;
+		}
+	}
+
+	function write( data ) {
+		var s = storage();
+		if ( ! s ) {
+			return;
+		}
+		try {
+			s.setItem( key, JSON.stringify( data ) );
+		} catch ( e ) {
+			// Fullt eller avstängt – sidan fungerar ändå, bara utan kopian.
+		}
+	}
+
+	function remove() {
+		var s = storage();
+		if ( s ) {
+			try {
+				s.removeItem( key );
+			} catch ( e ) {}
+		}
+	}
+
+	/** Fälten i utskicket utanför reselistan, med nyckel namn|ordning. */
+	function fields() {
+		var out = [];
+		var seen = {};
+		form.querySelectorAll( '[name^="cvkp["]' ).forEach( function ( el ) {
+			if ( list && list.contains( el ) ) {
+				return;
+			}
+			if ( 'hidden' === el.type || 'submit' === el.type || 'button' === el.type ) {
+				return;
+			}
+			var n = seen[ el.name ] = ( seen[ el.name ] || 0 ) + 1;
+			out.push( { key: el.name + '|' + n, el: el } );
+		} );
+		EXTRA_IDS.forEach( function ( id ) {
+			var el = document.getElementById( id );
+			if ( el ) {
+				out.push( { key: '#' + id, el: el } );
+			}
+		} );
+		return out;
+	}
+
+	function editors() {
+		return ( window.tinymce ? window.tinymce.editors || [] : [] ).filter( function ( ed ) {
+			return ed.id && 0 === ed.id.indexOf( 'cvkp_' );
+		} );
+	}
+
+	/** Reselistan som HTML, med det som skrivits inbakat. */
+	function tripHtml() {
+		if ( ! list ) {
+			return '';
+		}
+		list.querySelectorAll( 'input, textarea' ).forEach( function ( el ) {
+			if ( 'TEXTAREA' === el.tagName ) {
+				el.textContent = el.value;
+			} else if ( 'checkbox' === el.type || 'radio' === el.type ) {
+				if ( el.checked ) {
+					el.setAttribute( 'checked', 'checked' );
+				} else {
+					el.removeAttribute( 'checked' );
+				}
+			} else {
+				el.setAttribute( 'value', el.value );
+			}
+		} );
+		return list.innerHTML;
+	}
+
+	function snapshot() {
+		var data = { v: VERSION, fields: {}, editors: {}, trips: tripHtml() };
+		fields().forEach( function ( f ) {
+			data.fields[ f.key ] = ( 'checkbox' === f.el.type || 'radio' === f.el.type ) ? f.el.checked : f.el.value;
+		} );
+		editors().forEach( function ( ed ) {
+			if ( ed.initialized ) {
+				data.editors[ ed.id ] = ed.getContent();
+			}
+		} );
+		return data;
+	}
+
+	function save() {
+		if ( restoring || ! dirty ) {
+			return;
+		}
+		var data = snapshot();
+		var json = JSON.stringify( [ data.fields, data.editors, data.trips ] );
+		if ( json === lastSaved ) {
+			return;
+		}
+		lastSaved = json;
+		data.savedAt = Date.now();
+		write( data );
+	}
+
+	function setEditor( ed, html ) {
+		if ( ed.initialized ) {
+			ed.setContent( html );
+		} else {
+			ed.on( 'init', function () {
+				ed.setContent( html );
+			} );
+		}
+	}
+
+	function restore( data ) {
+		restoring = true;
+		if ( list && data.trips ) {
+			list.innerHTML = data.trips;
+		}
+		fields().forEach( function ( f ) {
+			if ( ! Object.prototype.hasOwnProperty.call( data.fields, f.key ) ) {
+				return;
+			}
+			if ( 'checkbox' === f.el.type || 'radio' === f.el.type ) {
+				f.el.checked = !! data.fields[ f.key ];
+			} else {
+				f.el.value = data.fields[ f.key ];
+			}
+			f.el.dispatchEvent( new Event( 'input', { bubbles: true } ) );
+		} );
+		Object.keys( data.editors || {} ).forEach( function ( id ) {
+			var area = document.getElementById( id );
+			if ( area ) {
+				area.value = data.editors[ id ];
+			}
+			var ed = window.tinymce && window.tinymce.get( id );
+			if ( ed ) {
+				setEditor( ed, data.editors[ id ] );
+			} else if ( window.tinymce ) {
+				window.tinymce.on( 'AddEditor', function ( e ) {
+					if ( e.editor.id === id ) {
+						setEditor( e.editor, data.editors[ id ] );
+					}
+				} );
+			}
+		} );
+		var title = document.getElementById( 'title' );
+		if ( title && title.value ) {
+			var prompt = document.getElementById( 'title-prompt-text' );
+			if ( prompt ) {
+				prompt.classList.add( 'screen-reader-text' );
+			}
+		}
+		restoring = false;
+	}
+
+	function notice( savedAt ) {
+		var box = document.createElement( 'div' );
+		box.className = 'notice notice-info cvkp-restored';
+		var time = new Date( savedAt ).toLocaleString( 'sv-SE', { dateStyle: 'short', timeStyle: 'short' } );
+		box.innerHTML = '<p><strong>Osparade ändringar från ' + time + ' är återställda.</strong> De har sparats i den här webbläsaren. Klicka på Spara för att spara dem i utskicket. <button type="button" class="button-link cvkp-discard">Släng ändringarna</button></p>';
+		var anchor = document.querySelector( '.wp-header-end' );
+		( anchor ? anchor.parentNode : form.parentNode ).insertBefore( box, anchor ? anchor.nextSibling : form );
+		box.querySelector( '.cvkp-discard' ).addEventListener( 'click', function () {
+			if ( window.confirm( 'Slänga de osparade ändringarna och visa utskicket som det är sparat?' ) ) {
+				remove();
+				window.removeEventListener( 'beforeunload', save );
+				window.location.reload();
+			}
+		} );
+	}
+
+	// Återställ om det finns en kopia som är nyare än det sparade utskicket och skiljer sig från det.
+	var draft = read();
+	if ( draft && draft.savedAt && Date.now() - draft.savedAt < MAX_AGE && ( cfg.isNew || draft.savedAt > cfg.modified * 1000 ) ) {
+		restore( draft );
+		notice( draft.savedAt );
+		dirty = true; // Det återställda är fortfarande osparat.
+		lastSaved = JSON.stringify( [ draft.fields, draft.editors, draft.trips ] );
+	} else if ( draft ) {
+		remove(); // Utskicket är sparat efter kopian – kopian behövs inte.
+	}
+
+	// Spara medan man skriver, när reselistan ändras och med jämna mellanrum
+	// (fångar också det som Claude-rutan och TinyMCE fyller i).
+	var timer = null;
+	function changed() {
+		if ( restoring ) {
+			return;
+		}
+		dirty = true;
+		clearTimeout( timer );
+		timer = setTimeout( save, 400 );
+	}
+	form.addEventListener( 'input', changed );
+	form.addEventListener( 'change', changed );
+	document.addEventListener( 'cvkp:changed', changed ); // Claude-rutan och reselistan.
+	if ( list ) {
+		new MutationObserver( changed ).observe( list, { childList: true } );
+	}
+	// Bara det man själv skriver i editorerna (inte när de laddas).
+	function watch( ed ) {
+		if ( ed.id && 0 === ed.id.indexOf( 'cvkp_' ) ) {
+			ed.on( 'input keyup change undo redo', changed );
+		}
+	}
+	if ( window.tinymce ) {
+		window.tinymce.on( 'AddEditor', function ( e ) {
+			watch( e.editor );
+		} );
+		editors().forEach( watch );
+	}
+	var interval = setInterval( save, 3000 );
+	window.addEventListener( 'beforeunload', save );
+
+	// Vid vanlig sparning behövs kopian inte längre. Förhandsgranskningen (ny flik) räknas inte.
+	form.addEventListener( 'submit', function ( event ) {
+		var by = event.submitter;
+		if ( by && '_blank' === by.getAttribute( 'formtarget' ) ) {
+			return;
+		}
+		window.removeEventListener( 'beforeunload', save );
+		clearInterval( interval );
+		clearTimeout( timer );
+		restoring = true; // Stoppa fler sparningar under tiden sidan skickas.
+		remove();
 	} );
 }() );

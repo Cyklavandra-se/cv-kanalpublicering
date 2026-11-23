@@ -362,6 +362,7 @@ class CVKP_Mailing {
 		if ( ! $screen || self::POST_TYPE !== $screen->post_type ) {
 			return;
 		}
+		$post = 'post' === $screen->base ? get_post() : null;
 		// Utskick har inget innehållsfält; WordPress autospar ger annars falska varningar om säkerhetskopior.
 		wp_dequeue_script( 'autosave' );
 		wp_enqueue_style( 'cvkp-admin', CVKP_URL . 'assets/admin.css', array(), CVKP_VERSION );
@@ -370,8 +371,13 @@ class CVKP_Mailing {
 			'cvkp-admin',
 			'cvkpAdmin',
 			array(
-				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'cvkp_trip' ),
+				'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
+				'nonce'    => wp_create_nonce( 'cvkp_trip' ),
+				// För att spara osparade ändringar i webbläsaren (se admin.js).
+				'postId'   => $post ? (int) $post->ID : 0,
+				'isNew'    => ! $post || 'auto-draft' === $post->post_status,
+				'modified' => $post ? (int) get_post_modified_time( 'U', true, $post ) : 0,
+				'userId'   => get_current_user_id(),
 			)
 		);
 	}

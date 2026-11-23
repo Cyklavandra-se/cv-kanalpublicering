@@ -40,6 +40,8 @@ Kortversion:
 6. Öppna utkastet i Mailchimp, skicka ett test och skicka. Granska och publicera blogginlägget i WordPress.
 7. Under **Facebook och Instagram**: granska texter och bilder, välj tid och klicka **Schemalägg**. Facebook kräver att blogginlägget är publicerat.
 
+Lämnar ni ett utskick utan att spara finns ändringarna kvar i webbläsaren och återställs när ni öppnar det igen (även ett nytt, osparat utskick). Klicka på Spara för att spara dem i utskicket.
+
 Ett blogginlägg som redan är publicerat ändras aldrig av tillägget. Ändra det direkt i inlägget.
 
 ## Uppdateringar
