@@ -37,10 +37,14 @@ class CVKP_Email_Renderer {
 	public static function trip_row( array $row, array $data ) {
 		$heading = isset( $row['heading'] ) ? trim( (string) $row['heading'] ) : '';
 		$label   = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
+		if ( '' === $label ) {
+			// Resans etikett, men inte om den bara är typen ("Vandring") – den säger ingenting.
+			$label = trim( (string) $data['label'] ) === trim( (string) $data['type'] ) ? '' : $data['label'];
+		}
 		return array(
 			'data'    => $data,
 			'heading' => '' !== $heading ? $heading : $data['title'],
-			'label'   => '' !== $label ? $label : $data['label'],
+			'label'   => $label,
 			'text'    => isset( $row['text'] ) ? (string) $row['text'] : '',
 		);
 	}

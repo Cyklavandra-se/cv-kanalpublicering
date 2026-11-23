@@ -16,7 +16,25 @@ if ( ! $avada ) {
 $base  = home_url( '/' );
 $links = get_permalink( $avada ) . "\n" . get_permalink( get_page_by_title( 'Madeira – vandra', OBJECT, 'page' ) ) . "\nhttps://example.com/annan-sajt/\n" . $base . 'finns-inte/';
 
-echo "== Första stycket (Avada)\n" . CVKP_Claude::first_paragraph( $avada->ID ) . "\n";
+// Som Wachau-sidan på sajten: bildram med adress först, rubrik, två stycken, en kort rad.
+$wachau = get_page_by_path( 'wachau-avada' );
+if ( ! $wachau ) {
+	$wid = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_name' => 'wachau-avada', 'post_title' => 'Wachau 5 dagar',
+		'post_content' => '[fusion_builder_container][fusion_builder_row][fusion_builder_column type="1_1"][fusion_imageframe image_id="123|full" lightbox="yes"]https://cyklavandra.se/wp-content/uploads/2026/06/Mosel-Weinberge-8-1200x750.jpg[/fusion_imageframe][fusion_title size="2"]Vandra i Wachau[/fusion_title][fusion_text]<p>En härlig vandringsresa genom UNESCO-världsarvet Wachau. Turen följer Welterbesteig Wachau – Världsarvsleden, en av Österrikes finaste vandringsleder – högt över Donau, genom vingårdsterrasser, aprikosodlingar och charmiga vinbyar.</p>
+<p>Utforska pittoreska byar som Dürnstein, Weißenkirchen och Spitz, besök mäktiga kloster och smaka på regionens berömda aprikosknödlar.</p>
+<p>5 dagar med charm – från Spitz till Krems med boende på utvalda charmhotell, och mycket annat.</p>[/fusion_text][fusion_gallery][fusion_gallery_image image="https://cyklavandra.se/wp-content/uploads/2026/06/bild-med-ett-mycket-langt-filnamn-som-blir-over-80-tecken.jpg"][/fusion_gallery_image][/fusion_gallery][/fusion_builder_column][/fusion_builder_row][/fusion_builder_container]' ) );
+	wp_set_post_tags( $wid, array( 'vandra', 'hike2' ) );
+	$wachau = get_post( $wid );
+}
+echo "== Wachau (två stycken, ingen bildadress)\n" . CVKP_Claude::first_paragraphs( $wachau->ID ) . "\n";
+$d   = CVKP_Trip_Data::get( $wachau->ID );
+$row = CVKP_Email_Renderer::trip_row( array( 'id' => $wachau->ID ), $d );
+echo "== Etikett: data='{$d['label']}' visas='{$row['label']}'\n";
+$blog = CVKP_Blog_Renderer::render( array_merge( CVKP_Mailing::defaults(), array( 'trips' => array( array( 'id' => $wachau->ID, 'text' => CVKP_Claude::first_paragraphs( $wachau->ID ) ) ) ) ) );
+echo "== Blogg: " . ( false === strpos( $blog, '<em>' ) ? 'ingen etikett' : 'ETIKETT KVAR' ) . ', ' . ( false === strpos( $blog, 'Mosel-Weinberge' ) ? 'ingen bildadress' : 'BILDADRESS KVAR' ) . ', stycken=' . substr_count( $blog, '<p>' ) . "\n";
+$mail = CVKP_Email_Renderer::render( array_merge( CVKP_Mailing::defaults(), array( 'heading' => 'X', 'trips' => array( array( 'id' => $wachau->ID, 'text' => CVKP_Claude::first_paragraphs( $wachau->ID ) ) ) ) ) );
+echo "== Mejl: " . ( false === strpos( $mail, 'aprikosknödlar. <a' ) ? 'Läs mer EJ sist i andra stycket' : 'Läs mer sist i andra stycket' ) . ', ' . ( preg_match( '/>Vandring</', $mail ) ? 'ETIKETT KVAR' : 'ingen ensam etikett' ) . "\n";
+echo "== Första stycket (Avada)\n" . CVKP_Claude::first_paragraphs( $avada->ID ) . "\n";
 echo "== Nyckelkälla: " . CVKP_Claude::key_source() . "\n";
 
 update_option( 'cvkp_mock_claude', '' );

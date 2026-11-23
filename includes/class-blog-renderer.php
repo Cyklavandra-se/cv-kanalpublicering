@@ -46,9 +46,6 @@ class CVKP_Blog_Renderer {
 			if ( $data['image_id'] ) {
 				$out[] = '<p><a href="' . esc_url( $data['url'] ) . '">' . wp_get_attachment_image( $data['image_id'], 'large', false, array( 'alt' => $data['title'] ) ) . '</a></p>';
 			}
-			if ( '' !== trim( $trip['label'] ) ) {
-				$out[] = '<p><em>' . esc_html( $trip['label'] ) . '</em></p>';
-			}
 			$text  = wpautop( wp_kses_post( $trip['text'] ) );
 			$link  = ' <a href="' . esc_url( $data['url'] ) . '">Läs mer</a>.';
 			$pos   = strrpos( $text, '</p>' );
