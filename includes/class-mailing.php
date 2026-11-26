@@ -387,13 +387,34 @@ class CVKP_Mailing {
 		} else {
 			echo '<li>Mailchimp: inget utkast ännu</li>';
 		}
-		if ( $blog_id && get_post( $blog_id ) ) {
-			printf(
-				'<li>Blogg: <a href="%s" target="_blank" rel="noopener">%s ↗</a> (%s)</li>',
-				esc_url( get_edit_post_link( $blog_id ) ),
-				esc_html( get_the_title( $blog_id ) ),
-				esc_html( 'publish' === get_post_status( $blog_id ) ? 'publicerat' : 'utkast' )
+		if ( $blog_id && get_post( $blog_id ) && 'trash' !== get_post_status( $blog_id ) ) {
+			$blog_status = get_post_status( $blog_id );
+			$blog_labels = array(
+				'publish' => 'publicerat',
+				'future'  => 'schemalagt i WordPress',
+				'pending' => 'väntar på granskning',
 			);
+			if ( 'publish' === $blog_status ) {
+				printf(
+					'<li>Blogg: <a href="%s" target="_blank" rel="noopener">%s ↗</a> (publicerat)</li>',
+					esc_url( get_permalink( $blog_id ) ),
+					esc_html( get_the_title( $blog_id ) )
+				);
+			} else {
+				printf(
+					'<li>Blogg: <a href="%s" target="_blank" rel="noopener">%s ↗</a> (%s)',
+					esc_url( get_edit_post_link( $blog_id ) ),
+					esc_html( get_the_title( $blog_id ) ),
+					esc_html( isset( $blog_labels[ $blog_status ] ) ? $blog_labels[ $blog_status ] : 'utkast' )
+				);
+				if ( current_user_can( 'publish_posts' ) && current_user_can( 'edit_post', $blog_id ) ) {
+					printf(
+						'<br><button type="submit" name="cvkp_publish_blog" value="1" class="button cvkp-publish-blog cvkp-confirm" data-confirm="%s">Publicera blogginlägget</button>',
+						esc_attr( 'Publicera "' . html_entity_decode( get_the_title( $blog_id ), ENT_QUOTES, 'UTF-8' ) . '" på cyklavandra.se nu? Inlägget publiceras som det ser ut i WordPress just nu.' )
+					);
+				}
+				echo '</li>';
+			}
 		} else {
 			echo '<li>Blogg: inget inlägg ännu</li>';
 		}
@@ -509,6 +530,9 @@ class CVKP_Mailing {
 		if ( ! empty( $_POST['cvkp_schedule'] ) || ! empty( $_POST['cvkp_cancel'] ) ) {
 			$notices = array_merge( $notices, self::run_social_action( $post_id, $data ) );
 		}
+		if ( ! empty( $_POST['cvkp_publish_blog'] ) ) {
+			$notices[] = self::publish_blog( $post_id );
+		}
 		if ( $notices ) {
 			set_transient( 'cvkp_notices_' . get_current_user_id(), $notices, 120 );
 		}
@@ -517,6 +541,52 @@ class CVKP_Mailing {
 		}
 		$notices = array_merge( $notices, self::run( $post_id, $data, html_entity_decode( get_the_title( $post_id ), ENT_QUOTES, 'UTF-8' ) ) );
 		set_transient( 'cvkp_notices_' . get_current_user_id(), $notices, 120 );
+	}
+
+	/**
+	 * Publicerar blogginlägget direkt, som det ser ut i WordPress (det kan ha redigerats
+	 * där). Efter det kan Facebook schemaläggas, eftersom länken då är publik.
+	 *
+	 * @return array Notis.
+	 */
+	public static function publish_blog( $post_id ) {
+		$blog_id = (int) get_post_meta( $post_id, self::META_BLOG, true );
+		$blog    = $blog_id ? get_post( $blog_id ) : null;
+		if ( ! $blog || 'trash' === $blog->post_status ) {
+			return array( 'type' => 'error', 'message' => 'Blogg: det finns inget blogginlägg att publicera. Klicka Spara och skapa utkast först.' );
+		}
+		if ( 'publish' === $blog->post_status ) {
+			return array( 'type' => 'warning', 'message' => 'Blogg: inlägget är redan publicerat.', 'link' => get_permalink( $blog_id ), 'linkText' => 'Visa inlägget' );
+		}
+		if ( ! current_user_can( 'publish_posts' ) || ! current_user_can( 'edit_post', $blog_id ) ) {
+			return array( 'type' => 'error', 'message' => 'Blogg: du har inte behörighet att publicera inlägg.' );
+		}
+
+		$postarr = array(
+			'ID'          => $blog_id,
+			'post_status' => 'publish',
+		);
+		// Ett inlägg som varit schemalagt i WordPress publiceras nu, med dagens datum.
+		if ( 'future' === $blog->post_status ) {
+			$postarr['post_date']     = current_time( 'mysql' );
+			$postarr['post_date_gmt'] = current_time( 'mysql', true );
+		}
+		$result = wp_update_post( wp_slash( $postarr ), true );
+		if ( is_wp_error( $result ) ) {
+			return array( 'type' => 'error', 'message' => 'Blogg: inlägget kunde inte publiceras (' . $result->get_error_message() . ').' );
+		}
+		clean_post_cache( $blog_id );
+		if ( 'publish' !== get_post_status( $blog_id ) ) {
+			return array( 'type' => 'error', 'message' => 'Blogg: inlägget publicerades inte. Försök publicera det direkt i WordPress.' );
+		}
+
+		$fb_next = CVKP_Social::get_state( $post_id, 'facebook' );
+		return array(
+			'type'     => 'success',
+			'message'  => 'Blogg: "' . html_entity_decode( get_the_title( $blog_id ), ENT_QUOTES, 'UTF-8' ) . '" är publicerat.' . ( ! empty( $fb_next['draft'] ) ? ' Nu kan Facebook schemaläggas under "Facebook och Instagram".' : '' ),
+			'link'     => get_permalink( $blog_id ),
+			'linkText' => 'Visa inlägget',
+		);
 	}
 
 	/** Schemalägg eller avbryt Facebook/Instagram. Det här är godkännandet. */

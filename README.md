@@ -37,7 +37,7 @@ Kortversion:
 3. Under **Resor**: välj resa och klicka **Lägg till resa**. Bild, länk, typ och antal dagar hämtas från resesidan, och resans beskrivning läggs in som starttext. Skriv om texten, ändra rubrik eller etikett vid behov och sortera med pilarna. "Läs mer" läggs till automatiskt. Välj också bild för Instagram, eller ta bort resan från Instagram.
 4. **Förhandsgranska nyhetsbrevet** visar mejlet direkt, även osparade ändringar.
 5. Bocka i kanaler och klicka **Spara och skapa utkast**. Klickar du igen uppdateras samma utkast – det blir inga dubbletter. Facebook- och Instagram-texterna fylls med förslag som du skriver om.
-6. Öppna utkastet i Mailchimp, skicka ett test och skicka. Granska och publicera blogginlägget i WordPress.
+6. Öppna utkastet i Mailchimp, skicka ett test och skicka. Granska blogginlägget (länken i Status) och publicera det med knappen **Publicera blogginlägget** i rutan Kanaler, eller direkt i WordPress.
 7. Under **Facebook och Instagram**: granska texter och bilder, välj tid och klicka **Schemalägg**. Facebook kräver att blogginlägget är publicerat.
 
 Lämnar ni ett utskick utan att spara finns ändringarna kvar i webbläsaren och återställs när ni öppnar det igen (även ett nytt, osparat utskick). Klicka på Spara för att spara dem i utskicket.
