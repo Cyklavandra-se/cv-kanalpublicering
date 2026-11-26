@@ -25,3 +25,11 @@ $_POST = array();
 $fusion = get_post_meta( $blog, '_fusion', true );
 echo 'efter uppdatering: ' . json_encode( $fusion ) . "\n";
 delete_transient( 'cvkp_notices_' . get_current_user_id() );
+
+// Mejlets footer: adressen har klassen cvkp-address och CSS som neutraliserar automatiska adresslänkar.
+$mail = CVKP_Email_Renderer::render( array_merge( CVKP_Mailing::defaults(), array( 'heading' => 'X' ) ) );
+echo 'mejl: adressklass ' . ( false !== strpos( $mail, 'class="cvkp-address"' ) ? 'ja' : 'NEJ' )
+	. ', CSS för Gmail ' . ( false !== strpos( $mail, 'u + #body .cvkp-address a' ) ? 'ja' : 'NEJ' )
+	. ', Apple ' . ( false !== strpos( $mail, 'x-apple-data-detectors' ) ? 'ja' : 'NEJ' )
+	. ', body id ' . ( false !== strpos( $mail, '<body id="body"' ) ? 'ja' : 'NEJ' )
+	. ', ingen egen länk på adressen ' . ( preg_match( '/<span class="cvkp-address"[^>]*>(?:(?!<\/span>).)*<a /s', $mail ) ? 'NEJ' : 'ja' ) . "\n";
