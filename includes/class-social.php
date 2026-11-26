@@ -628,7 +628,7 @@ class CVKP_Social {
 			'<p class="cvkp-field"><label for="cvkp-fb_link"><strong>Länk</strong></label><input type="url" class="widefat" id="cvkp-fb_link" name="cvkp[fb_link]" value="%s" placeholder="%s"><span class="description">%s</span></p>',
 			esc_attr( $d['fb_link'] ),
 			esc_attr( $link ? $link : 'Blogginläggets adress när det är publicerat' ),
-			esc_html( $link ? 'Tomt = blogginlägget.' : 'Blogginlägget är inte publicerat ännu – Facebook kan inte schemaläggas förrän det är det.' )
+			esc_html( $link ? 'Tomt = blogginlägget.' : 'Blogginlägget är inte publicerat ännu – publicera det med knappen i rutan Kanaler, sedan kan Facebook schemaläggas.' )
 		);
 		self::status_html( $post->ID, 'facebook', $fb );
 		echo '</div>';
