@@ -41,9 +41,14 @@ $address = array_filter( array_map( 'trim', explode( "\n", (string) $s['address'
     .code{font-size:22px !important;letter-spacing:1px !important;}
     .h3{font-size:21px !important;line-height:27px !important;}
   }
+  /* Adressen i footern: Gmail, Apple Mail och Outlook gör adresser till blå länkar på egen hand.
+     De här reglerna ger sådana länkar footerns färg och tar bort understrykningen. */
+  .cvkp-address a, .cvkp-address a:link, .cvkp-address a:visited { color:#FFF0F5 !important; text-decoration:none !important; cursor:text; }
+  u + #body .cvkp-address a, #MessageViewBody .cvkp-address a { color:#FFF0F5 !important; text-decoration:none !important; }
+  a[x-apple-data-detectors] { color:inherit !important; text-decoration:none !important; font-size:inherit !important; font-family:inherit !important; font-weight:inherit !important; line-height:inherit !important; }
 </style>
 </head>
-<body style="margin:0;padding:0;background:#F2F4F1;">
+<body id="body" style="margin:0;padding:0;background:#F2F4F1;">
 <?php if ( '' !== trim( $m['preheader'] ) ) : ?>
 <span class="mcnPreviewText" style="display:none;font-size:0;line-height:0;max-height:0;max-width:0;opacity:0;overflow:hidden;visibility:hidden;mso-hide:all;"><?php echo esc_html( $m['preheader'] ); ?></span>
 <?php endif; ?>
@@ -153,7 +158,7 @@ $address = array_filter( array_map( 'trim', explode( "\n", (string) $s['address'
   <tr><td align="center" style="background:#333333;padding:0 18px 24px 18px;font-family:<?php echo esc_attr( $font ); ?>;font-size:12px;line-height:18px;color:#FFF0F5;text-align:center;">
     <em>Copyright © *|CURRENT_YEAR|* <?php echo esc_html( $s['company_name'] ); ?>, All rights reserved.</em><br>
     Vi skickar regelbundet erbjudanden och information till er som har kontaktat oss. Vill ni inte längre få nyhetsbrevet kan ni enkelt avprenumerera via länken längst ner.<br><br>
-    <span style="color:#FFF0F5;text-decoration:none;"><?php echo $r::unlinkable( $s['company_name'] ); // phpcs:ignore ?><br><?php echo implode( '<br>', array_map( array( $r, 'unlinkable' ), $address ) ); // phpcs:ignore ?></span><br><br>
+    <span class="cvkp-address" style="color:#FFF0F5;text-decoration:none;"><?php echo $r::unlinkable( $s['company_name'] ); // phpcs:ignore ?><br><?php echo implode( '<br>', array_map( array( $r, 'unlinkable' ), $address ) ); // phpcs:ignore ?></span><br><br>
     <a href="*|LIST:ADDRESS_VCARD_HREF|*" style="color:#FFFFFF;text-decoration:underline;">Lägg till oss i din adressbok</a><br><br>
     Vill du ändra hur du får dessa nyhetsbrev?<br>
     Du kan <a href="*|UPDATE_PROFILE|*" style="color:#FFFFFF;text-decoration:underline;">uppdatera dina inställningar</a> eller <a href="*|UNSUB|*" style="color:#FFFFFF;text-decoration:underline;">avprenumerera dig</a>.
